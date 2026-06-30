@@ -286,6 +286,37 @@ tool::url_decode( string s_url )
   return s_dest;
 }
 
+// Returns true if the URL-decoded request path contains a "." or ".."
+// path component (i.e. would escape the template directory when
+// concatenated to httpd.templatedir and opened). The check must run on the
+// DECODED path: the earlier raw-URL "/.." strip in sock.cpp misses
+// %-encoded dots (e.g. %2e%2f) which decode to ".." afterwards.
+bool
+tool::path_has_traversal( const string &s_request )
+{
+  // Reject embedded NULs outright: url_decode turns %00 into '\0', and a
+  // std::string can hold it while ifstream/c_str() truncate at it — a
+  // divergence that is never legitimate in a request path.
+  if ( s_request.find('\0') != string::npos )
+    return true;
+
+  size_t i_start = 0;
+  size_t i_len   = s_request.size();
+
+  for ( size_t i = 0; i <= i_len; ++i )
+  {
+    if ( i == i_len || s_request[i] == '/' )
+    {
+      string s_seg = s_request.substr( i_start, i - i_start );
+      if ( s_seg == ".." || s_seg == "." )
+        return true;
+      i_start = i + 1;
+    }
+  }
+
+  return false;
+}
+
 int
 tool::htoi(string &s_str)
 {

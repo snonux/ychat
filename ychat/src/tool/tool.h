@@ -51,6 +51,7 @@ public:
   static string shell_command( string s_command, method m_method );
   static string ychat_version();
   static string url_decode(string s_url);
+  static bool path_has_traversal(const string &s_request);
   static int htoi(string &s_str);
 };
 

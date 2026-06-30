@@ -171,6 +171,16 @@ reqp::parse(context *p_context)
 void
 reqp::run_html_mod( string s_event, map<string,string> &map_params, user* p_user )
 {
+  // Security: s_event is attacker-controlled (a query param) and is
+  // concatenated into the html-module .so path then dlopen()'d. Reject
+  // non-alphanumeric names so ".."/"/" can't traverse out of the modules dir
+  // and load an arbitrary shared object (RCE).
+  if ( ! tool::is_alpha_numeric(s_event) )
+  {
+    wrap::system_message("Reqp: blocked module-name traversal: " + s_event);
+    return;
+  }
+
   container *c = new container;
 
   c->elem[0] = (void*) wrap::WRAP;

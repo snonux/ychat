@@ -474,6 +474,16 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
   if (s_request.empty())
     s_request = wrap::CONF->get_elem("httpd.startsite");
 
+  // Path-traversal guard (security): reject any request whose decoded path
+  // contains a "."/".." component — it would escape httpd.templatedir when
+  // html.cpp opens (templatedir + request). The raw-URL "/.." strip above
+  // is insufficient because it runs before url_decode (attacker uses %2e%2f).
+  if ( tool::path_has_traversal(s_request) )
+  {
+    wrap::system_message("Sock: blocked path traversal: " + s_request);
+    s_request = wrap::CONF->get_elem("httpd.html.notfound");
+  }
+
   map_params["request"] = s_request;
 
   {

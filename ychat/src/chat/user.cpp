@@ -391,6 +391,21 @@ user::command( string &s_command )
 
   string s_mod( wrap::CONF->get_elem("httpd.modules.commandsdir") + "yc_" );
   string s_command2 = s_command.substr(0, pos2-1);
+
+  // Security: s_command2 is attacker-controlled (the first token of a chat
+  // message starting with '/') and is concatenated into the command-module
+  // .so path then dlopen()'d. Reject non-alphanumeric names so ".."/"/" can't
+  // traverse out of the commands dir and load an arbitrary shared object.
+  if ( ! tool::is_alpha_numeric(s_command2) )
+  {
+    wrap::system_message("Chat: blocked command-name traversal: " + s_command2);
+    string s_msg = "<font color=\"" + wrap::CONF->get_elem("chat.html.errorcolor") + "\""
+                    + wrap::CONF->get_elem( "chat.msgs.err.findingcommand" )
+                    + "</font>\n";
+    msg_post( &s_msg );
+    return;
+  }
+
   s_mod.append( s_command2  ).append( ".so" );
 
   dynmod *mod = wrap::MODL->get_module( s_mod, get_name() );
