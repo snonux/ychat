@@ -93,7 +93,7 @@ dynmod*
 modl::cache_module( string s_name, bool b_print_sys_msg )
 {
   void     *the_module = NULL;
-  function *the_func   = NULL;
+  mod_func_t *the_func   = NULL;
 
   the_module = dlopen( s_name.c_str(), RTLD_LAZY );
   //the_module = dlopen( s_name.c_str(), RTLD_NOW );
@@ -104,7 +104,7 @@ modl::cache_module( string s_name, bool b_print_sys_msg )
     return NULL;
   }
 
-  the_func = (function*) dlsym( the_module, "extern_function" );
+  the_func = (mod_func_t*) dlsym( the_module, "extern_function" );
 
   if ( the_func == NULL )
   {

@@ -85,7 +85,7 @@ logd::flush()
   ofstream of_output;
   of_output.open(s_logfile.c_str(), ios::app);
 
-  if ( of_output == NULL )
+  if ( ! of_output.is_open() )
   {
     wrap::system_message( LOGERR1 + s_logfile );
     exit(1);

@@ -116,6 +116,9 @@ sock::_make_server_socket( int i_port )
 
   setsockopt(i_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&i_optval, sizeof(int));
 
+  i_server_port = i_port;
+  i_server_sock = i_sock;
+
   if (set_nonblock(i_server_sock) < 0)
   {
     wrap::system_message(NONBLER, errno);
@@ -123,9 +126,6 @@ sock::_make_server_socket( int i_port )
   }
 
   wrap::system_message(SOCKCRT + string("localhost:") + tool::int2string(i_port));
-
-  i_server_port = i_port;
-  i_server_sock = i_sock;
 
   if (listen(i_sock, BACKLOG) < 0)
   {

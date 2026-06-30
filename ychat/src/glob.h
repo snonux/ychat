@@ -89,7 +89,7 @@
 
 using namespace std;
 
-typedef int function( void *v_arg );
+typedef int mod_func_t( void *v_arg );
 
 struct container
 {
@@ -98,7 +98,7 @@ struct container
 
 struct dynmod
 {
-  function *the_func  ;
+  mod_func_t *the_func  ;
   void     *the_module;
 };
 
