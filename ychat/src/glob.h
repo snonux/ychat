@@ -82,7 +82,7 @@
 
 #define POSTBUF 1024
 #define READBUF 2048
-#define READSOCK 2048
+#define READSOCK 16384
 #define SERVMSG
 //#define CTCSEGV
 #define VERBOSE
