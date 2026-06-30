@@ -31,6 +31,49 @@
 #include "../maps/mtools.h"
 #include "../contrib/crypt/md5.h"
 
+#include <fstream>
+#include <unistd.h>
+#include <ctime>
+
+// Build one candidate session ID of i_len chars drawn from s_valid, using a
+// strong random source (/dev/urandom) with a one-time rand() fallback.
+// NOTE: deliberately does NOT re-seed srand() with time(0) on every call —
+// the old code did that, which (a) made IDs predictable and (b) made two
+// logins in the same second produce identical IDs; the collision retry then
+// re-seeded with the same time and recursed forever -> stack overflow.
+static string
+gen_session_candidate( int i_len, const string &s_valid )
+{
+  static ifstream urandom( "/dev/urandom", ios::binary );
+  static bool b_seeded = false;
+
+  size_t n = s_valid.length();
+  string s;
+  s.reserve( i_len );
+
+  for ( int i = 0; i < i_len; i++ )
+  {
+    unsigned char b;
+    if ( urandom.is_open() && urandom.read( (char*)&b, 1 ) )
+      s += s_valid[ b % n ];
+    else
+    {
+      // A failed read sets failbit and would stick forever; clear it so a
+      // transient failure can self-heal on the next byte (if urandom is
+      // genuinely unavailable we keep falling back to rand()).
+      urandom.clear();
+      if ( ! b_seeded )
+      {
+        srand( (unsigned) time(0) ^ ( (unsigned) getpid() << 8 ) );
+        b_seeded = true;
+      }
+      s += s_valid[ rand() % n ];
+    }
+  }
+
+  return s;
+}
+
 sman::sman()
 {
   i_continous_session_count = i_session_count = 0;
@@ -45,35 +88,41 @@ sman::~sman()
 string sman::generate_id( int i_len )
 {
   string s_valid = wrap::CONF->get_elem("chat.session.validchars");
-  string s_ret = "";
+  if ( s_valid.empty() || i_len <= 0 )
+    return ""; // misconfigured: nothing to build an ID from
 
-  srand(time(0)+tool::string2int(wrap::CONF->get_elem("chat.session.kloakkey")));
-  int i_char;
-
-
-  for (int i = 0; i < i_len; i++)
+  // Bounded collision retry. With /dev/urandom the collision probability is
+  // negligible, but a bound prevents any pathological case from recursing
+  // forever (the old code recursed unboundedly and crashed on same-second
+  // collisions).
+  for ( int i_try = 0; i_try < 8; i_try++ )
   {
-    i_char = rand() % s_valid.length();
-    s_ret += s_valid[i_char];
-  }
+    string s_ret = gen_session_candidate( i_len, s_valid );
 
-  if ( wrap::CONF->get_elem("chat.session.md5hash") == "true" )
-  {
-    string s_salt = wrap::CONF->get_elem("chat.session.md5salt");
-    string s_hash(md5::MD5Crypt(s_ret.c_str(), s_salt.c_str()));
-    s_ret.append(s_hash.substr(s_ret.find(s_salt) + s_salt.length() + 3));
-  }
+    if ( wrap::CONF->get_elem("chat.session.md5hash") == "true" )
+    {
+      string s_salt = wrap::CONF->get_elem("chat.session.md5salt");
+      string s_hash(md5::MD5Crypt(s_ret.c_str(), s_salt.c_str()));
+      s_ret.append(s_hash.substr(s_ret.find(s_salt) + s_salt.length() + 3));
+    }
 
-  // Prove, if the TempID already exists
-  sess* p_sess = get_elem(s_ret);
+    // Prove, if the TempID already exists
+    if ( ! get_elem(s_ret) )
+      return s_ret;
 
-  if (p_sess)
-  {
     wrap::system_message(SESSEXI);
-    return generate_id(i_len);
   }
 
-  return s_ret;
+  // Astronomically unlikely with a strong random source. Return a final
+  // candidate only if it does NOT collide (so we never overwrite/leak an
+  // existing session); otherwise bail with an empty ID (login degrades
+  // gracefully instead of crashing or leaking).
+  string s_last = gen_session_candidate( i_len, s_valid );
+  if ( ! get_elem(s_last) )
+    return s_last;
+
+  wrap::system_message("SMAN: gave up finding a unique session id");
+  return "";
 }
 
 sess *sman::create_session( )
