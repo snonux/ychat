@@ -39,7 +39,7 @@
 #define CHATFLO "Chat: Flooding ("
 #define CFILEOK "Parsing config file"
 #define CFILEFA "Failed opening config file!"
-#define CONTACT "Contact: http://www.yChat.org, Mail@yChat.org, ICQ: 11655527"
+#define CONTACT "Contact: https://codeberg.org/snonux/ychat, Mail@yChat.org, ICQ: 11655527"
 #define CLRHTML "HTML: Cleared the document cache "
 #define CLIWELC "Command Line Interface (type help for a list of all commands)"
 #define CLIPRMO ">> "
