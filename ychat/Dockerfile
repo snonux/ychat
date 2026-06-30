@@ -60,6 +60,11 @@ COPY --from=builder /build/ychat/mods/ /app/mods/
 # registered user, but we also physically omit it from the revival image
 # so the RCE primitive is absent, not merely unreachable.
 RUN rm -f /app/mods/commands/yc_exec.so
+# This is a no-database (guest-mode) build: registration is non-functional
+# (yc_register's body is #ifdef DATABASE), so drop the dead register form and
+# the register module from the image, and serve the guest login page
+# (index_guest.html - no password field, no register link) as the start page.
+RUN rm -f /app/html/register.html /app/mods/html/yc_register.so
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY etc/ychat.conf /app/etc/ychat.conf
 
@@ -76,4 +81,6 @@ ENTRYPOINT ["/app/docker-entrypoint.sh"]
 # s_ret.find(salt) returns npos and the subsequent substr/append corrupts
 # the heap and segfaults on login). The 32-char random id is enough for a
 # revival guest chat.
-CMD ["/app/bin/ychat", "-o", "chat.session.md5hash", "false"]
+# httpd.startsite=index_guest.html: the no-DB guest login page (no password
+# field, no register link) - registration isn't possible without a database.
+CMD ["/app/bin/ychat", "-o", "chat.session.md5hash", "false", "-o", "httpd.startsite", "index_guest.html"]
