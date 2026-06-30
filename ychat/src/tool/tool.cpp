@@ -32,6 +32,7 @@
 #include <sys/wait.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #include "tool.h"
@@ -223,34 +224,77 @@ tool::int2char( int i_int )
 string
 tool::shell_command( string s_command, method m_method )
 {
-  FILE *file;
-  char buf[READBUF];
-  char *c_pos;
-  string s_ret = "";
+  // Execute the CGI file directly via fork/execve — NOT through a shell
+  // (the old popen() ran `/bin/sh -c <s_command>`, so any shell
+  // metacharacter in the URL-derived request path was a command-injection
+  // / RCE vector when httpd.enablecgi=true). s_command must be the full
+  // path to an executable file (the caller passes templatedir + request,
+  // and reqp's path-traversal guard already prevents escaping templatedir).
+  (void) m_method; // only METH_RETSTRING is used by the CGI path
 
   wrap::system_message(SHELLEX);
   wrap::system_message(s_command);
 
-  if ( (file=popen(s_command.c_str(), "r")) == NULL )
+  struct stat st;
+  if ( stat(s_command.c_str(), &st) != 0 || ! S_ISREG(st.st_mode) )
   {
     wrap::system_message( SHELLER );
+    return "";
   }
-  else
+
+  int fd[2];
+  if ( pipe(fd) != 0 )
   {
-    while (true)
-    {
-      if (fgets(buf, READBUF, file) == NULL)
-        break;
-
-      switch (m_method)
-      {
-      default:
-        s_ret.append("\n" + string(buf));
-      } // switch
-    }
-
-    pclose(file);
+    wrap::system_message( SHELLER );
+    return "";
   }
+
+  pid_t pid = fork();
+  if ( pid < 0 )
+  {
+    close(fd[0]); close(fd[1]);
+    wrap::system_message( SHELLER );
+    return "";
+  }
+
+  if ( pid == 0 )
+  {
+    // child: wire stdout to the pipe and exec the file with an empty env.
+    close(fd[0]);
+    dup2(fd[1], STDOUT_FILENO);
+    close(fd[1]);
+    // Don't let the CGI inherit the server's listen socket / other client
+    // connections (a CGI shouldn't see or hold those fds).
+    long l_maxfd = sysconf(_SC_OPEN_MAX);
+    if ( l_maxfd < 0 ) l_maxfd = 256;
+    for ( long i = STDERR_FILENO + 1; i < l_maxfd; ++i )
+      close((int)i);
+    char* argv[] = { const_cast<char*>(s_command.c_str()), (char*) NULL };
+    char* envp[] = { (char*) NULL };
+    execve( s_command.c_str(), argv, envp );
+    _exit(127); // exec failed
+  }
+
+  // parent: read the CGI output.
+  close(fd[1]);
+  string s_ret;
+  char buf[READBUF];
+  for (;;)
+  {
+    ssize_t n = read(fd[0], buf, sizeof(buf));
+    if ( n > 0 )
+      s_ret.append( buf, n );
+    else if ( n == 0 )
+      break; // EOF
+    else if ( errno == EINTR )
+      continue;
+    else
+      break; // hard error
+  }
+  close(fd[0]);
+
+  int i_status;
+  waitpid( pid, &i_status, 0 );
 
   return s_ret;
 }
