@@ -12,8 +12,8 @@ C++ this tree uses) + slim Rocky 9 runtime. All optional features are OFF:
 ```
 podman build -t ychat:dev .
 podman run --rm -p 2000:2000 ychat:dev
-# smoke test (ychat speaks HTTP/0.9-style responses, hence --http0.9):
-curl --http0.9 http://127.0.0.1:2000/index.html
+# smoke test (ychat returns proper HTTP/1.1 responses):
+curl -sS http://127.0.0.1:2000/index.html -o /dev/null -w '%{http_code}\n'
 ```
 
 ## Legacy-C++ patches applied
@@ -43,10 +43,11 @@ semantics-preserving patches were made so it builds on Rocky 9 / GCC 11:
 With MySQL disabled, all user/session/room state is **in-memory only** and is
 lost on restart. `chat.enableguest=true` lets guests log in without a DB.
 
-> Note: ychat emits raw HTTP/0.9-style responses (no `HTTP/1.1 200` status
-> line / headers). Modern browsers and `curl` may refuse these by default;
-> `curl --http0.9` works. This is a pre-existing property of the codebase, not
-> introduced by this revival.
+> Note: ychat now emits proper HTTP/1.1 responses (`HTTP/1.1 200 OK` + headers).
+> Earlier in the revival it sent headerless HTTP/0.9-style bodies (the response
+> builder left the headers in a local string and never wrote them back to the
+> socket buffer); that was fixed in `src/reqp.cpp`. Browsers and `curl` work
+> normally now.
 
 ## Push to the f3s registry
 
