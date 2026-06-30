@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <cstdlib>
 
 #include "sock.h"
 #include "../tool/tool.h"
@@ -239,19 +240,101 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
   static int i_size = READSOCK * sizeof(char);
   context *p_context = static_cast<context*>(p_arg);
 
-  if (-1 == read(i_fd, p_context->c_buf, i_size))
+  // A request (especially a POST body) can arrive split across several TCP
+  // segments — e.g. when a reverse proxy (Traefik) forwards headers and body
+  // separately. Accumulate into c_buf across re-arms of this event until we
+  // have the full request, then process it.
+  bool b_got_data = false;
+  for (;;)
   {
-    switch (errno)
+    if ( p_context->i_buf_len >= READSOCK )
+      break; // buffer full
+
+    ssize_t n = read(i_fd, p_context->c_buf + p_context->i_buf_len,
+                     i_size - p_context->i_buf_len);
+
+    if (n > 0)
     {
-    case EAGAIN:
-    case EINTR:
+      p_context->i_buf_len += n;
+      b_got_data = true;
+      continue; // drain whatever else is currently buffered
+    }
+
+    if (n == 0)
+    {
+      // EOF: client closed before a complete request. Drop it.
+      if (!b_got_data || p_context->i_buf_len == 0)
+      {
+        p_context->del_event();
+        delete p_context;
+        return;
+      }
+      break; // process whatever we did get
+    }
+
+    // n < 0
+    if (errno == EAGAIN || errno == EINTR)
+    {
+      if (!b_got_data)
+      {
+        // Nothing new this invocation; wait for more.
+        event_add(p_context->p_event, NULL);
+        return;
+      }
+      break; // we have some data; check below whether the request is complete
+    }
+
+    // Hard read error.
+    p_context->del_event();
+    delete p_context;
+    return;
+  }
+
+  p_context->c_buf[p_context->i_buf_len] = '\0';
+  string s_buf(p_context->c_buf);
+
+  // For POST, wait until we have the full body (per Content-Length) before
+  // parsing — otherwise the form params (event/nick/tmpid/...) are missing
+  // and logins silently no-op.
+  if ( strncmp("POST", p_context->c_buf, 4) == 0 )
+  {
+    size_t i_hdr_end = s_buf.find("\r\n\r\n");
+    size_t i_body_off = string::npos;
+    if (i_hdr_end != string::npos)
+      i_body_off = i_hdr_end + 4;
+    else
+    {
+      i_hdr_end = s_buf.find("\n\n");
+      if (i_hdr_end != string::npos)
+        i_body_off = i_hdr_end + 2;
+    }
+
+    if (i_hdr_end == string::npos)
+    {
+      // Headers not fully received yet; wait for more.
       event_add(p_context->p_event, NULL);
       return;
     }
+
+    size_t i_cl = s_buf.find("Content-Length:");
+    if (i_cl != string::npos)
+    {
+      size_t v = i_cl + 16;
+      size_t ve = s_buf.find_first_of("\r\n", v);
+      if (ve == string::npos) ve = s_buf.size();
+      int i_content_len = atoi(s_buf.substr(v, ve - v).c_str());
+      int i_have = (int)s_buf.size() - (int)i_body_off;
+      if (i_have < i_content_len)
+      {
+        // Body still incomplete; wait for the rest.
+        event_add(p_context->p_event, NULL);
+        return;
+      }
+    }
   }
+
   p_context->del_event();
 
-  string s_buf(p_context->c_buf);
   string s_query("");
 
   bool b_is_post_request;

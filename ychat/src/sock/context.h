@@ -43,6 +43,7 @@ struct context
   sock *p_sock;
   struct event* p_event;
   char c_buf[READSOCK+1];
+  int  i_buf_len;   // accumulated bytes in c_buf (request may arrive in several reads)
   //string s_request;
   map<string,string> *p_map_params;
   int i_fd;
