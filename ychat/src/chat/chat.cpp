@@ -257,8 +257,13 @@ chat::login( map<string,string> &map_params )
     p_user->set_status( tool::string2int(map_params["status"]));
   }
 
-  // Prove if user is the default operator.
-  if ( tool::to_lower(wrap::CONF->get_elem("chat.defaultop")) == tool::to_lower(s_user) )
+  // Grant operator status only to an AUTHENTICATED (registered) user whose
+  // nick matches chat.defaultop. In guest/no-DB mode (Mode A) is_reg is always
+  // false, so nobody can claim operator by simply logging in as the defaultop
+  // nick — this closes unauth -> op -> /exec (popen RCE) and /set (re-enable)
+  // escalation. Registered ops still work once database auth (Mode B) is on.
+  if ( p_user->get_is_reg() &&
+       tool::to_lower(wrap::CONF->get_elem("chat.defaultop")) == tool::to_lower(s_user) )
   {
     wrap::system_message(CHATDOP);
     p_user->set_status(0);

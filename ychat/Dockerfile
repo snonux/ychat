@@ -54,6 +54,12 @@ COPY --from=builder /build/ychat/bin/ychat /app/bin/ychat
 # Read-only resources
 COPY --from=builder /build/ychat/html/ /app/html/
 COPY --from=builder /build/ychat/mods/ /app/mods/
+# Defense-in-depth: the /exec command module does popen() on an attacker-
+# controlled shell string (host RCE for any operator). It is gated to
+# operators by permissions and the defaultop grant now requires a
+# registered user, but we also physically omit it from the revival image
+# so the RCE primitive is absent, not merely unreachable.
+RUN rm -f /app/mods/commands/yc_exec.so
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY etc/ychat.conf /app/etc/ychat.conf
 
