@@ -101,6 +101,11 @@ sock::_make_server_socket( int i_port )
   name.sin_port = htons(i_port);
   int i_optval = 1;
 
+  // SO_REUSEADDR must be set BEFORE bind, otherwise a quick container
+  // restart can hit EADDRINUSE on port 2000 (TIME_WAIT) and fall back to
+  // 2001, which the k8s Service doesn't target.
+  setsockopt(i_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&i_optval, sizeof(int));
+
   if (bind(i_sock, (struct sockaddr *) &name, sizeof (name)) < 0)
   {
     wrap::system_message(BINDERR, errno);
@@ -113,8 +118,6 @@ sock::_make_server_socket( int i_port )
     // Re-run recursive.
     return _make_server_socket(i_port);
   }
-
-  setsockopt(i_sock, SOL_SOCKET, SO_REUSEADDR, (char*)&i_optval, sizeof(int));
 
   i_server_port = i_port;
   i_server_sock = i_sock;
@@ -151,7 +154,7 @@ sock::process_request()
 {
   int i;
   struct sockaddr_in clientname;
-  socklen_t size;
+  socklen_t size = sizeof(clientname);
 
   ++i_req;
   int i_client_sock = accept(i_server_sock, (struct sockaddr *) &clientname, &size);
@@ -162,6 +165,11 @@ sock::process_request()
     {
     case EAGAIN:
     case EINTR:
+      return;
+    default:
+      // Any other accept error: bail out for this event rather than
+      // proceed with an invalid fd (EBADF in set_nonblock + UB downstream).
+      wrap::system_message(SOCKER5, errno);
       return;
     }
   }

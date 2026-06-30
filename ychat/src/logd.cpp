@@ -32,6 +32,9 @@
 #ifdef LOGGING
 
 #include <fstream>
+#include <iostream>
+#include <cstring>
+#include <cerrno>
 
 logd::logd( string s_filename, string s_log_lines )
 {
@@ -87,7 +90,11 @@ logd::flush()
 
   if ( ! of_output.is_open() )
   {
-    wrap::system_message( LOGERR1 + s_logfile );
+    // Log the failure to stderr only. Do NOT call wrap::system_message():
+    // that routes back through LOGD->log_simple_line -> flush, which would
+    // recurse infinitely on the same failing logd and overflow the stack
+    // (SIGSEGV) if the log file/dir is unwritable.
+    cerr << "yChat: could not open logfile '" << s_logfile << "' (" << strerror(errno) << ")" << endl;
     exit(1);
   }
 

@@ -153,30 +153,19 @@ tool::split_string(string s_string, string s_split)
 string
 tool::trim( string s_str )
 {
-  if ( s_str.empty() )
-    return s_str;
+  // Left trim: find first non-whitespace char.
+  size_t b = 0;
+  while ( b < s_str.size() &&
+         ( s_str[b] == ' ' || s_str[b] == '\n' || s_str[b] == '\r' ) )
+    ++b;
 
-  char c_cur = s_str[0];
-  int i_pos = 0;
+  // Right trim: find last non-whitespace char.
+  size_t e = s_str.size();
+  while ( e > b &&
+         ( s_str[e-1] == ' ' || s_str[e-1] == '\n' || s_str[e-1] == '\r' ) )
+    --e;
 
-  // left trim
-  while ( c_cur == ' '|| c_cur == '\n' || c_cur == '\r' )
-  {
-    s_str.erase(i_pos,1);
-    c_cur = s_str[++i_pos];
-  }
-
-  // right trim
-  i_pos = s_str.size();
-  c_cur = s_str[s_str.size()];
-
-  while ( c_cur == ' ' || c_cur == '\n' || c_cur == '\0' || c_cur == '\r' )
-  {
-    s_str.erase(i_pos, 1);
-    c_cur = s_str[--i_pos];
-  }
-
-  return s_str;
+  return s_str.substr( b, e - b );
 }
 
 char*

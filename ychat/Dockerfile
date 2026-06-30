@@ -54,12 +54,20 @@ COPY --from=builder /build/ychat/bin/ychat /app/bin/ychat
 # Read-only resources
 COPY --from=builder /build/ychat/html/ /app/html/
 COPY --from=builder /build/ychat/mods/ /app/mods/
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY etc/ychat.conf /app/etc/ychat.conf
 
-# Writable log dir
+# Writable log dir (entrypoint recreates /app/log/rooms since a volume mount
+# on /app/log hides the image's copy).
 RUN mkdir -p /app/log/rooms && chown -R ychat:ychat /app
 
 USER 1000:1000
 EXPOSE 2000
 
-ENTRYPOINT ["/app/bin/ychat"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# chat.session.md5hash=false: the md5 session-id path does a bad substr()
+# (the default salt contains chars not in chat.session.validchars, so
+# s_ret.find(salt) returns npos and the subsequent substr/append corrupts
+# the heap and segfaults on login). The 32-char random id is enough for a
+# revival guest chat.
+CMD ["/app/bin/ychat", "-o", "chat.session.md5hash", "false"]

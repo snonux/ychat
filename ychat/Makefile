@@ -1,7 +1,7 @@
 MAKE=gmake
 HEADER?=docs/header.txt
 PREFIX=/usr/local
-EFIND=find -E
+EFIND=find -regextype posix-extended
 BIN=./bin/ychat
 all:    build modules base
 	@echo "Now edit the ychat.conf and run ychat!"
