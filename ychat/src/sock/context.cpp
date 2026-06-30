@@ -37,6 +37,8 @@ context::context(sock *p_sock, struct event *p_event, int i_fd)
   this->i_fd = i_fd;
   this->i_buf_len = 0;
   this->c_buf[0] = '\0';
+  this->p_map_params = NULL;
+  this->p_response = NULL;
   this->p_user = NULL;
 }
 

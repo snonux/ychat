@@ -35,6 +35,7 @@
 
 #include "sock.h"
 #include "../tool/tool.h"
+#include "context.h"
 
 using namespace std;
 
@@ -311,13 +312,17 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
 
     if (i_hdr_end == string::npos)
     {
-      // Headers not fully received yet. Guard against oversized header
-      // floods: if the buffer is already full with no header terminator, the
-      // request can never be completed - drop it (no re-arm) rather than spin.
-      // The fd leaks for that one abusive request (see the body branch below);
-      // preferable to a crash/spin.
+      // Headers not fully received yet. If the buffer is already full with
+      // no header terminator (oversized header flood) the request can never
+      // complete: drop it now (same pattern as the EOF/error branches) rather
+      // than spin. Otherwise wait for the rest.
       if ( p_context->i_buf_len < READSOCK )
         event_add(p_context->p_event, NULL);
+      else
+      {
+        p_context->del_event();
+        delete p_context;
+      }
       return;
     }
 
@@ -332,13 +337,15 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
       if (i_have < i_content_len)
       {
         // Body still incomplete. If the buffer is already full the body
-        // can never fit (oversized POST): drop the request without re-arming
-        // (re-arming a full buffer would spin, and deleting the context
-        // inside this read callback corrupts libevent). The fd leaks for
-        // that one abusive request — acceptable for a toy chat and far
-        // better than a crash/spin. Otherwise wait for the rest.
+        // can never fit (oversized POST): drop it now (same pattern as the
+        // EOF/error branches) rather than spin. Otherwise wait for the rest.
         if ( p_context->i_buf_len < READSOCK )
           event_add(p_context->p_event, NULL);
+        else
+        {
+          p_context->del_event();
+          delete p_context;
+        }
         return;
       }
     }
