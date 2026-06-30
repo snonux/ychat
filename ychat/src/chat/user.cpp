@@ -514,8 +514,16 @@ user::flush_stream()
     if ( errno == EAGAIN || errno == EINTR )
       break; // socket buffer full; keep buffered for later
 
-    // Hard error (EPIPE, ECONNRESET, ...): peer gone.
-    clear_stream();
+    // Hard error (EPIPE, ECONNRESET, ...): peer gone. Reap the user from
+    // its room, but do NOT clear_stream() (keep i_stream_fd >= 0).
+    // gcol::remove_garbage skips users whose stream is still open, so the
+    // user is NOT deleted while its stream context (armed read event +
+    // p_context->p_user) is still alive - that would be a UAF on the later
+    // disconnect. The read EOF (handle_stream_read) is the single reaper:
+    // it set_online(false) (no-op here, already offline) + clear_stream +
+    // delete context, then remove_garbage deletes the user. Removing the
+    // user from the room also stops room broadcasts targeting it (no
+    // repeated writes to the dead fd).
     set_online( false );
     return;
   }
