@@ -87,6 +87,8 @@ chat::get_user( string &s_user, bool &b_found )
 
   if ( *( (bool*) param.elem[1] ) )
     return (user*) param.elem[2];
+
+  return NULL; // not found: defined return (callers check b_found first)
 }
 
 void
