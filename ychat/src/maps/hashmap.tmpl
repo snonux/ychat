@@ -23,6 +23,8 @@
  *: Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
  *:*/
 
+#include <vector>
+
 template<class key_type_>
 bool
 compare_allocator<key_type_>::operator()(key_type_ t_key_1, key_type_ t_key_2) const
@@ -136,16 +138,32 @@ template<class obj_type, class key_type_, class hash_type, class alloc_type>
 void
 hashmap<obj_type, key_type_, hash_type, alloc_type>::run_func( void (*func)(obj_type) )
 {
-  typename hashmap<obj_type, key_type_, hash_type, alloc_type>::iterator iter;
-  for ( iter = this->begin(); iter != this->end(); ++iter )
-    ( *func ) ( iter->second );
+  // Snapshot the values first so a callback may safely mutate the map while
+  // we iterate (e.g. check_timeout deletes a timed-out user from its room
+  // mid-iteration, which would invalidate a live begin/end iterator).
+  std::vector<obj_type> v_snap;
+  v_snap.reserve( this->size() );
+  for ( typename hashmap<obj_type, key_type_, hash_type, alloc_type>::iterator iter = this->begin();
+        iter != this->end(); ++iter )
+    v_snap.push_back( iter->second );
+
+  for ( typename std::vector<obj_type>::iterator it = v_snap.begin();
+        it != v_snap.end(); ++it )
+    ( *func )( *it );
 }
 
 template<class obj_type, class key_type_, class hash_type, class alloc_type>
 void
 hashmap<obj_type, key_type_, hash_type, alloc_type>::run_func( void (*func)(obj_type, void*), void* v_arg )
 {
-  typename hashmap<obj_type, key_type_, hash_type, alloc_type>::iterator iter;
-  for ( iter = this->begin(); iter != this->end(); ++iter )
-    ( *func ) ( iter->second, v_arg );
+  // See above: snapshot so callbacks may mutate the map during iteration.
+  std::vector<obj_type> v_snap;
+  v_snap.reserve( this->size() );
+  for ( typename hashmap<obj_type, key_type_, hash_type, alloc_type>::iterator iter = this->begin();
+        iter != this->end(); ++iter )
+    v_snap.push_back( iter->second );
+
+  for ( typename std::vector<obj_type>::iterator it = v_snap.begin();
+        it != v_snap.end(); ++it )
+    ( *func )( *it, v_arg );
 }

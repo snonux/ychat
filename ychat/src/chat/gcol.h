@@ -44,6 +44,7 @@ private:
 
 
   static void delete_users_( user* user_obj  );
+  static void collect_users_( user* user_obj, void* v_arg );
 
 public:
   gcol();

@@ -86,6 +86,14 @@ parse_argc( int argc, char* argv[] )
   return start_params;
 }
 
+// Single-threaded periodic timer callback (1s) driving the chat timer work.
+// Defined here so the event can be registered in main() before event_dispatch.
+static void
+timer_cb( int /*fd*/, short /*event*/, void* /*arg*/ )
+{
+  wrap::TIMR->tick();
+}
+
 int
 main(int argc, char* argv[])
 {
@@ -109,6 +117,18 @@ main(int argc, char* argv[])
   event_init();
   sign::init_event_handlers();
   sock::init_event_handlers();
+
+  // Periodic timer in the libevent main loop (single-threaded, no racy
+  // pthread): drives time-of-day updates, idle timeouts/auto-away, the
+  // stream PING keepalive, ip-cache cleanup and garbage collection. See
+  // timr::tick().
+  static struct event ev_timer;
+  event_set( &ev_timer, -1, EV_PERSIST, timer_cb, NULL );
+  struct timeval tv;
+  tv.tv_sec  = 1;
+  tv.tv_usec = 0;
+  event_add( &ev_timer, &tv );
+
   //wrap::SOCK->start();
   event_dispatch();
 

@@ -78,9 +78,28 @@ gcol::remove_garbage()
   }
   vec_rooms.clear();
 
+  // Delete only users whose stream connection is already closed. A user may
+  // have been reaped (set_online(false)) while its long-lived stream frame
+  // was still open; deleting the user now would leave the stream context's
+  // p_user dangling (use-after-free on the later disconnect). Such users are
+  // kept until their stream closes (handle_stream_read clears the fd), then
+  // deleted on a later pass. Collect via run_func (the hash_map base is not
+  // directly iterable from here).
+  vector<user*> vec_all;
+  p_map_users->run_func( collect_users_, (void*) &vec_all );
 
-  p_map_users->run_func( delete_users_ );
+  vector<user*> vec_keep;
+  for ( vector<user*>::iterator it = vec_all.begin(); it != vec_all.end(); ++it )
+  {
+    user* u = *it;
+    if ( u->get_stream_fd() >= 0 )
+      vec_keep.push_back(u);
+    else
+      delete_users_( u ); // clean() + delete (matches the old behaviour)
+  }
   p_map_users->clear();
+  for ( vector<user*>::iterator it = vec_keep.begin(); it != vec_keep.end(); ++it )
+    p_map_users->add_elem( *it, tool::to_lower((*it)->get_name()) );
 
   return true;
 }
@@ -133,6 +152,12 @@ gcol::delete_users_( user *user_obj )
   wrap::system_message( REMUSER + user_obj->get_name() );
   user_obj->clean();
   delete user_obj;
+}
+
+void
+gcol::collect_users_( user *user_obj, void *v_arg )
+{
+  static_cast<std::vector<user*>*>(v_arg)->push_back( user_obj );
 }
 
 void

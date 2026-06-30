@@ -185,7 +185,6 @@ user::set_online( bool b_online )
   this -> b_online = b_online;
   if (!b_online)
   {
-    cout << "SETTING OFFLINE" << endl;
     // remove the user from its room.
     string s_user(get_name());
     string s_user_lowercase(get_lowercase_name());

@@ -47,6 +47,7 @@ public:
 
   bool get_timer_active() const;
   void start( void *v_ptr );
+  void tick(); // single-threaded periodic tick (called from the libevent loop)
 
   void set_time( double d_uptime, int i_cur_seconds, int i_cur_minutes, int i_cur_hours );
   string add_zero_to_front( string s_time );

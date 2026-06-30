@@ -597,7 +597,13 @@ sock::handle_stream_read(int i_fd, short event, void *p_arg)
   if ( p_context->p_event )
     event_del( p_context->p_event );
   if ( p_context->p_user )
+  {
+    // Reap the user from its room (no-op if already offline, e.g. idle-reaped).
+    // Without this a cleanly-disconnected online user would linger in the
+    // room/online list until the next idle-timeout sweep.
+    p_context->p_user->set_online(false);
     p_context->p_user->clear_stream();
+  }
   delete p_context;
 }
 
