@@ -48,6 +48,8 @@ private:
 
   // private members:
   _socket *p_sock;
+  int   i_stream_fd; // long-lived stream connection fd (-1 = none)
+  bool  b_stream_ready; // initial HTTP response sent; ok to push messages
   string s_msg;
   bool b_online; // true if user is online.
   bool b_has_sess; // true if user already has a session!
@@ -111,6 +113,12 @@ public:
   bool get_is_gag();
   void set_online( bool b_online );
   void set_sock(_socket *p_sock);
+  // Stream (long-lived chat-display) connection for this user.
+  void set_stream_fd(int i_fd);
+  int  get_stream_fd();
+  void set_stream_ready(bool b) { b_stream_ready = b; }
+  void flush_stream();   // write buffered s_msg to the stream fd
+  void clear_stream();   // drop stream state (disconnect/logout)
   void set_fake( bool b_fake );
   void set_invisible( bool b_invisible );
   void set_has_sess( bool b_has_sess );

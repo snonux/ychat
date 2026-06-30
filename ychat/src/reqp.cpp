@@ -104,16 +104,24 @@ reqp::parse(context *p_context)
         // if a chat stream
         else if ( s_event == "stream" )
         {
-          /*
-          string s_resp(s_http+s_http_stream);
-          s_resp.append(s_http_colength + tool::int2string(s_response.size()) + "\r\n" +
-               s_http_cotype + map_params["content-type"]
-                // + s_http_cotype_add
-          	 + "\r\n\r\n" );*/
-          /*		  string s_resp("");
-                    s_resp.append(wrap::HTML->parse(map_params));
-          		  p_user->set_context(p_context);
-          		  */
+          // Long-lived streaming chat-display connection. Build the initial
+          // HTTP response (headers + the stream.html template) into p_response;
+          // handle_client_read sends it via the keep-alive path and keeps the
+          // connection open. Attach this fd to the user so msg_post can push
+          // subsequent chat messages to it.
+          string s_body = wrap::HTML->parse( map_params );
+
+          string s_resp;
+          s_resp.append( s_http ); // HTTP/1.1 200 OK ... Cache-Control ... Connection: close
+          s_resp.append( s_http_cotype + map_params["content-type"] + s_http_cotype_add + "\r\n" );
+          // No Content-Length: the body streams incrementally until close.
+          s_resp.append( "\r\n" );
+          s_resp.append( s_body );
+
+          *p_response = s_resp;
+
+          p_user->set_stream_fd( p_context->i_fd );
+          p_context->p_user = p_user;
           map_params["KEEP_ALIVE"] = "yes";
           return;
         }

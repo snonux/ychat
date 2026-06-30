@@ -493,11 +493,102 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
   p_context->p_response = new string("");
   p_sock->get_req_parser()->parse(p_context);
 
+  if ( (*p_context->p_map_params)["KEEP_ALIVE"] == "yes" )
+  {
+    // Streaming chat-display connection: send the initial response, then
+    // keep the fd open for pushed messages and watch for disconnect.
+    struct event *p_ev = new struct event;
+    p_context->p_event = p_ev;
+    event_set( p_ev, i_fd, EV_WRITE, handle_stream_write, p_context );
+    event_add( p_ev, NULL );
+    return;
+  }
+
   struct event *p_ev_handle_client_write = new struct event;
   p_context->p_event = p_ev_handle_client_write;
 
   event_set(p_ev_handle_client_write, i_fd, EV_WRITE, handle_client_write, p_context);
   event_add(p_ev_handle_client_write, NULL);
+}
+
+// Finish sending the initial stream response, then switch to a persistent
+// read event that detects the client disconnecting. Does NOT delete the
+// context (the connection stays open for streamed chat messages).
+void
+sock::handle_stream_write(int i_fd, short event, void *p_arg)
+{
+  context *p_context = static_cast<context*>(p_arg);
+  string *p_response = p_context->p_response;
+
+  if ( p_response && ! p_response->empty() )
+  {
+    ssize_t n = write( i_fd, p_response->data(), p_response->size() );
+    if ( n > 0 )
+      p_response->erase( 0, n );
+    else if ( n < 0 && ( errno == EAGAIN || errno == EINTR ) )
+    {
+      event_add( p_context->p_event, NULL );
+      return;
+    }
+    else if ( n < 0 )
+    {
+      // Peer gone before the initial response was sent.
+      if ( p_context->p_user )
+        p_context->p_user->clear_stream();
+      delete p_context;
+      return;
+    }
+
+    if ( ! p_response->empty() )
+    {
+      event_add( p_context->p_event, NULL );
+      return;
+    }
+  }
+
+  // Initial response fully sent: free it, mark the user's stream as ready
+  // to receive pushed messages, flush anything already buffered, then arm
+  // a persistent read event to detect disconnect.
+  delete p_response;
+  p_context->p_response = NULL;
+
+  if ( p_context->p_user )
+  {
+    p_context->p_user->set_stream_ready( true );
+    p_context->p_user->flush_stream();
+  }
+
+  event_set( p_context->p_event, i_fd, EV_READ | EV_PERSIST, handle_stream_read, p_context );
+  event_add( p_context->p_event, NULL );
+}
+
+// The stream connection is quiet except for disconnect. Drain any stray
+// bytes the client sends; on EOF/error reap the context and clear the
+// user's stream reference.
+void
+sock::handle_stream_read(int i_fd, short event, void *p_arg)
+{
+  context *p_context = static_cast<context*>(p_arg);
+  char c_buf[256];
+
+  for (;;)
+  {
+    ssize_t n = read( i_fd, c_buf, sizeof(c_buf) );
+    if ( n > 0 )
+      continue; // drain unexpected client data
+    if ( n == 0 )
+      break;    // EOF -> disconnect
+    // n < 0
+    if ( errno == EAGAIN || errno == EINTR )
+      return;   // still connected; persistent event stays armed
+    break;      // error -> disconnect
+  }
+
+  if ( p_context->p_event )
+    event_del( p_context->p_event );
+  if ( p_context->p_user )
+    p_context->p_user->clear_stream();
+  delete p_context;
 }
 
 void

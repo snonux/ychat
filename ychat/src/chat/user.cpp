@@ -32,6 +32,8 @@
 using namespace std;
 
 #include <errno.h>
+#include <unistd.h>
+#include <cstring>
 
 user::user() : name( "" )
 {
@@ -44,7 +46,9 @@ user::user( string s_name ) : name( s_name )
 }
 
 user::~user()
-{}
+{
+  // The stream fd is owned by its context, not by the user.
+}
 
 void
 user::initialize()
@@ -56,6 +60,8 @@ user::initialize()
 
   this -> l_messages_recv = 0;
   this -> p_sock = NULL;
+  this -> i_stream_fd = -1;
+  this -> b_stream_ready = false;
   this -> p_room = NULL;
   this -> s_msg = "";
   this -> b_is_reg = false;
@@ -78,6 +84,7 @@ user::clean()
   set_invisible(false);
   set_away(false, "");
   set_sock(NULL);
+  clear_stream();
 }
 
 void
@@ -441,25 +448,71 @@ user::set_sock(_socket* p_sock)
 }
 
 void
+user::set_stream_fd(int i_fd)
+{
+  // The context owns the fd and closes it on disconnect; the user only
+  // stores the number so msg_post can write to it. -1 = no stream.
+  i_stream_fd = i_fd;
+}
+
+int
+user::get_stream_fd()
+{
+  return i_stream_fd;
+}
+
+// Write a chat message to this user's open stream connection.
+// Single-threaded (libevent loop), so no locking needed. Messages are
+// buffered in s_msg until the initial HTTP response has been sent
+// (b_stream_ready), then flushed. Best-effort non-blocking write; anything
+// that can't be written now stays buffered for the next flush. On a hard
+// write error the peer is gone: drop our reference (the stream context's
+// read event will reap it and close the fd) and mark the user offline.
+void
 user::msg_post( string *p_msg )
 {
-  /*
   ++l_messages_recv;
-  if (p_sock == NULL) {
+
+  if ( i_stream_fd < 0 )
+    return; // no open stream connection; nothing to deliver to
+
   s_msg.append(*p_msg);
-  return;
+  if ( ! b_stream_ready )
+    return; // initial response not yet sent; keep buffered
 
-  }
-  else if (!s_msg.empty())
+  flush_stream();
+}
+
+void
+user::flush_stream()
+{
+  while ( ! s_msg.empty() && i_stream_fd >= 0 )
   {
-  wrap::SOCK->_send(p_sock, s_msg.c_str(), s_msg.size() );
-  s_msg.clear();
-  }
+    ssize_t n = write( i_stream_fd, s_msg.data(), s_msg.size() );
+    if ( n > 0 )
+    {
+      s_msg.erase( 0, n );
+      continue;
+    }
+    if ( n == 0 )
+      break;
 
-  if ( 0 > wrap::SOCK->_send(p_sock, p_msg->c_str(), p_msg->size() ) ) {
-  cout << "psock: " << (int) p_sock << endl;
-  set_online( false );
-  */
+    if ( errno == EAGAIN || errno == EINTR )
+      break; // socket buffer full; keep buffered for later
+
+    // Hard error (EPIPE, ECONNRESET, ...): peer gone.
+    clear_stream();
+    set_online( false );
+    return;
+  }
+}
+
+void
+user::clear_stream()
+{
+  i_stream_fd = -1;
+  b_stream_ready = false;
+  s_msg.clear();
 }
 /*
     void

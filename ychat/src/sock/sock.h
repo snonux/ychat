@@ -74,6 +74,8 @@ protected:
   static void handle_client_read(int i_fd, short event, void *p_arg);
   static void handle_client_write(int i_fd, short event, void *p_arg);
   static void handle_client_stream_write(int i_fd, short event, void *p_arg);
+  static void handle_stream_write(int i_fd, short event, void *p_arg);
+  static void handle_stream_read(int i_fd, short event, void *p_arg);
 
   int set_nonblock(int i_sock);
 
