@@ -155,6 +155,7 @@ reqp::parse(context *p_context)
                  s_http_cotype_add + "\r\n" );
 
   s_resp.append(*p_response);
+  *p_response = s_resp;
 // }
 }
 
