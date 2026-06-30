@@ -64,7 +64,11 @@ RUN rm -f /app/mods/commands/yc_exec.so
 # (yc_register's body is #ifdef DATABASE), so drop the dead register form and
 # the register module from the image, and serve the guest login page
 # (index_guest.html - no password field, no register link) as the start page.
+# The Options menu (options.html + yc_options) is likewise DB-only account
+# management (email/password), so drop it too; the Options link in the input
+# frame is hidden via the #ifndef DATABASE %%OPTIONS_LINK%% substitution.
 RUN rm -f /app/html/register.html /app/mods/html/yc_register.so
+RUN rm -f /app/html/options.html /app/mods/html/yc_options.so
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 COPY etc/ychat.conf /app/etc/ychat.conf
 

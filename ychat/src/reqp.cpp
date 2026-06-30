@@ -139,6 +139,21 @@ reqp::parse(context *p_context)
     }
   }
 
+  // Build-aware account-options link. The Options menu (options.html +
+  // yc_options) only makes sense with a database (it sets the user's
+  // email/password); without one it is non-persistent and misleading (a guest
+  // who sets a password can't log back in after being garbage-collected), so
+  // the no-DB build omits the link entirely (and the Dockerfile drops
+  // options.html + yc_options.so from the image). input.html renders
+  // %%OPTIONS_LINK%%.
+#ifdef DATABASE
+  map_params["OPTIONS_LINK"] =
+    "<a href='#' class='fancy' onclick=\"javascript:popup('options.html?"
+    "event=options&tmpid=" + map_params["tmpid"] + "', 600, 480)\">Options</a>";
+#else
+  map_params["OPTIONS_LINK"] = "";
+#endif
+
   if ( wrap::CONF->get_elem("httpd.enablecgi").compare("true") == 0 &&
        string::npos != map_params["request"].find(".cgi") )
   {
