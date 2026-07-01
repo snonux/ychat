@@ -29,20 +29,36 @@
 #define DATA_H
 
 #include "data_base.h"
+#ifdef USE_SQLITE
+#include <sqlite3.h>
+#else
 #include <mysql/mysql.h>
+#endif
 
 using namespace std;
 
-class data : public data_base // data implementation used in data.h
+// Named ychatdb, not "data": a class literally named "data" collides with
+// std::data() (C++17) under "using namespace std" - GCC treats it as
+// "reference to 'data' is ambiguous". Same class of fix as the
+// function->mod_func_t rename in glob.h and attributes::set_attr_flag in
+// ../ycurses.
+class ychatdb : public data_base // db implementation used by wrap::DATA
 {
 private:
+#ifdef USE_SQLITE
+  // Parameter binding (sqlite3_bind_text) does its own escaping, so unlike
+  // the MySQL path there is no separate secure_query()/parse_result() step.
+  hashmap<string> select_query( string s_query, string s_nick, vector<string>& vec_elements );
+  void insert_query( string s_query, map<string,string> map_insert );
+#else
   MYSQL_RES* select_query( string s_query, string s_where_rule, vector<string>& vec_elements );
   hashmap<string> parse_result( MYSQL_RES* p_result, vector<string>& vec_elements );
   void insert_query( string s_query, map<string,string> map_insert );
   string secure_query( string s_mysql_query );
+#endif
 public:
-  data( );
-  ~data( );
+  ychatdb( );
+  ~ychatdb( );
 
   hashmap<string> select_user_data( string s_user, string s_query );
   void insert_user_data( string s_user, string s_query, map<string,string> insert_map );

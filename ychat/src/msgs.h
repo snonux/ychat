@@ -89,6 +89,9 @@
 #define MYSQLQU "MySQL: "
 #define MYSQLQ2 "MySQL: Adding query "
 #define MYSQLE1 "MySQL: Error running mysql_init "
+#define SQLITEQU "SQLite: "
+#define SQLITEE1 "SQLite: Error opening database file "
+#define SQLITEE2 "SQLite: Error running query: "
 #endif
 
 #define SIGNALR "Signal: Received "

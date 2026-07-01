@@ -45,7 +45,15 @@ data_base::data_base( )
     {
       vector<string> vec_tokens;
       string s_element = wrap::CONF->get_elem(*iter);
-      unsigned i_pos = 0;
+      // size_t, not unsigned: truncating string::npos (64-bit) to 32-bit
+      // makes "i_pos != string::npos" true on the last (no-more-spaces)
+      // token, and i_pos+1 then wraps back to 0 in 32-bit arithmetic, so
+      // s_element never shrinks and this becomes an infinite loop that
+      // grows vec_tokens forever (OOM). Never triggered before this
+      // revival: DATABASE was never actually compiled previously (Mode A
+      // disables it; --enable-mysql was separately broken - see
+      // configure.ac's enable_mysql/enable_mysqlclient mismatch).
+      size_t i_pos = 0;
 
       for ( bool b_find = 1; b_find; )
       {

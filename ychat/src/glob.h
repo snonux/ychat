@@ -50,6 +50,14 @@
 #endif
 #endif
 
+#ifdef HAVE_LIBSQLITE3
+#ifdef HAVE_SQLITE3_H
+#define USE_SQLITE
+#define DATABASE
+#define DATA_PRINT_QUERIES
+#endif
+#endif
+
 #define PUSHSTR 1000
 
 /* The backlog argument defines the maximum length the queue of pending

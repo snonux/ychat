@@ -77,7 +77,7 @@ public:
   chat* CHAT;
 #ifdef DATABASE
 
-  data* DATA;
+  ychatdb* DATA;
 #endif
 
   gcol* GCOL;
@@ -115,7 +115,7 @@ public:
   static chat* CHAT;
 #ifdef DATABASE
 
-  static data* DATA;
+  static ychatdb* DATA;
 #endif
 
   static gcol* GCOL;

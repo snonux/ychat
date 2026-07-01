@@ -28,7 +28,11 @@
 #ifndef CON_H
 #define CON_H
 
+#ifdef USE_SQLITE
+#include <sqlite3.h>
+#else
 #include <mysql/mysql.h>
+#endif
 #include <iostream>
 #include "con_base.h"
 
@@ -37,7 +41,11 @@ using namespace std;
 class con : public con_base
 {
 public:
+#ifdef USE_SQLITE
+  sqlite3* p_sqlite;
+#else
   MYSQL* p_mysql;
+#endif
   con( );
   ~con( );
 };

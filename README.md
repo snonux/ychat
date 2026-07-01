@@ -6,13 +6,15 @@ are kept here as historical/revival code.
 
 | Subproject | What it is | Status |
 |------------|------------|--------|
-| [`./ychat`](ychat/)   | An HTTP-based web chat server (browsers are the clients; CSS/HTML/JS only). | **Revived & deployed** — builds in Docker, runs on the f3s k3s cluster. |
-| [`./yhttpd`](yhttpd/) | A tiny standalone http server derived from ychat's socket/threading engine. | Unrevived (see its own tree). |
-| [`./ycurses`](ycurses/) | A curses front-end experiment. | Unrevived (see its own tree). |
+| [`./ychat`](ychat/)   | An HTTP-based web chat server (browsers are the clients; CSS/HTML/JS only). | **Revived & deployed** — Mode A (in-memory guest chat) builds in Docker, runs on the f3s k3s cluster. Mode B (embedded SQLite, real persistent accounts) builds and works locally — see [`ychat/DOCKER-SQLITE.md`](ychat/DOCKER-SQLITE.md) — but isn't deployed. |
+| [`./yhttpd`](yhttpd/) | A tiny standalone http server derived from ychat's socket/threading engine. | Builds and serves reliably in Docker (verified under concurrent load) — not deployed. See [`./yhttpd/DOCKER.md`](yhttpd/DOCKER.md). |
+| [`./ycurses`](ycurses/) | A curses front-end experiment. | Builds and runs in Docker (a demo, not a service, so nothing to deploy) — see [`./ycurses/BUILD.md`](ycurses/BUILD.md). |
 
 The detailed, up-to-date build/deploy notes for the chat live in
-[`./ychat/DOCKER.md`](ychat/DOCKER.md). The rest of this file is a quickstart
-for running **ychat** locally in Docker and accessing it.
+[`./ychat/DOCKER.md`](ychat/DOCKER.md) (Mode A) and
+[`./ychat/DOCKER-SQLITE.md`](ychat/DOCKER-SQLITE.md) (Mode B). The rest of
+this file is a quickstart for running **ychat** locally in Docker and
+accessing it.
 
 > The ychat tree has been substantially fixed during this revival (legacy-C++
 > build fixes, a from-scratch streaming-chat layer, and a security/bug sweep).

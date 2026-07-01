@@ -39,7 +39,7 @@ extern "C"
     container* c          = (container*) v_arg;
     dynamic_wrap* p_wrap  = (dynamic_wrap*) c->elem[0];
     conf*      p_conf     = (conf*) p_wrap->CONF;
-    data*      p_data     = (data*) p_wrap->DATA;
+    ychatdb*   p_data     = (ychatdb*) p_wrap->DATA;
     string*    p_msgs     = &(*((map<string,string>*) c->elem[1]))["INFO"];
     string*    p_nick     = &(*((map<string,string>*) c->elem[1]))["nick"];
     string*    p_email    = &(*((map<string,string>*) c->elem[1]))["email"];

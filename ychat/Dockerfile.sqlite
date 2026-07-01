@@ -1,0 +1,82 @@
+# yChat revival image — Mode B (embedded SQLite, no SSL, no readline)
+#
+# Same Rocky Linux 9 / GCC 11 base as ../Dockerfile (Mode A), but built with
+# --enable-sqlite instead of --disable-mysql: this restores real user
+# accounts (register/login persist across restarts) without depending on an
+# external MySQL server - the whole database is one file under /app/data.
+#
+# Runtime layout (WORKDIR /app):
+#   bin/ychat          server binary
+#   etc/ychat.conf     config (found via ./etc/ search path)
+#   html/              templates, INCLUDING register.html/options.html
+#                       (functional now that DATABASE is enabled)
+#   mods/commands/*.so runtime-loadable command modules
+#   mods/html/*.so     runtime-loadable html modules (yc_register/yc_options
+#                       kept - only Mode A strips them)
+#   log/               writable logs (mount a volume here)
+#   data/              writable SQLite db file (mount a volume here for
+#                       persistence across container restarts)
+
+# ---------- builder ----------
+FROM rockylinux:9 AS builder
+
+RUN dnf -y install \
+        gcc-c++ \
+        make \
+        autoconf \
+        automake \
+        libevent-devel \
+        sqlite-devel \
+    && dnf clean all
+
+WORKDIR /build/ychat
+COPY . .
+
+RUN cd src \
+ && ./configure --disable-readline --disable-ssl --enable-sqlite \
+ && cd .. \
+ && make -j"$(nproc)"
+
+# ---------- runtime ----------
+FROM rockylinux:9 AS runtime
+
+RUN dnf -y install \
+        libevent \
+        libstdc++ \
+        sqlite-libs \
+        tzdata \
+        ca-certificates \
+    && dnf clean all
+
+# Non-root runtime user. ychat binds port 2000 (unprivileged).
+RUN useradd -r -u 1000 -d /app -s /sbin/nologin ychat
+
+WORKDIR /app
+
+# Binary
+COPY --from=builder /build/ychat/bin/ychat /app/bin/ychat
+
+# Read-only resources (register.html/options.html and their modules are
+# kept - functional in this DB-enabled build, unlike Mode A).
+COPY --from=builder /build/ychat/html/ /app/html/
+COPY --from=builder /build/ychat/mods/ /app/mods/
+# Defense-in-depth, same as Mode A: /exec does popen() on an
+# attacker-controlled string, physically omit it regardless of DB mode.
+RUN rm -f /app/mods/commands/yc_exec.so
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+COPY etc/ychat.conf /app/etc/ychat.conf
+
+# Writable log + data dirs (entrypoint recreates log/rooms since a volume
+# mount on /app/log hides the image's copy; data/ holds the sqlite file).
+RUN mkdir -p /app/log/rooms /app/data && chown -R ychat:ychat /app
+
+USER 1000:1000
+EXPOSE 2000
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+# chat.session.md5hash=false: same pre-existing salt/substr bug as Mode A
+# (unrelated to the database backend).
+# chat.database.dbname=data/ychat.db: SQLite file path (see con.cpp/con.h -
+# this config key is reused as a file path instead of a MySQL db name when
+# built with --enable-sqlite).
+CMD ["/app/bin/ychat", "-o", "chat.session.md5hash", "false", "-o", "chat.database.dbname", "data/ychat.db"]

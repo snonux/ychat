@@ -33,7 +33,7 @@ using namespace std;
 //<<*
 chat* wrap::CHAT = NULL;
 #ifdef DATABASE
-data* wrap::DATA = NULL;
+ychatdb* wrap::DATA = NULL;
 #endif
 gcol* wrap::GCOL = NULL;
 sman* wrap::SMAN = NULL;
@@ -166,7 +166,7 @@ wrap::init_wrapper(map<string,string>* p_main_loop_params)
   // Init the data manager.
 #ifdef DATABASE
 
-  WRAP->DATA = DATA = new data;
+  WRAP->DATA = DATA = new ychatdb;
 #endif
   //*>>
 
