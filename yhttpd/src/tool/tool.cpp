@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <stdio.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #include "tool.h"
@@ -104,7 +105,7 @@ list<string>
 tool::split_string(string s_string, string s_split)
 {
   list<string> list_ret;
-  unsigned i_pos, i_len = s_split.length();
+  size_t i_pos, i_len = s_split.length();
 
   while ( (i_pos = s_string.find(s_split)) != string::npos )
   {
@@ -120,30 +121,19 @@ tool::split_string(string s_string, string s_split)
 string
 tool::trim( string s_str )
 {
-  if( s_str.empty() )
-    return s_str;
+  // Left trim: find first non-whitespace char.
+  size_t b = 0;
+  while ( b < s_str.size() &&
+         ( s_str[b] == ' ' || s_str[b] == '\n' || s_str[b] == '\r' ) )
+    ++b;
 
-  char c_cur = s_str[0];
-  int i_pos = 0;
+  // Right trim: find last non-whitespace char.
+  size_t e = s_str.size();
+  while ( e > b &&
+         ( s_str[e-1] == ' ' || s_str[e-1] == '\n' || s_str[e-1] == '\r' ) )
+    --e;
 
-  // left trim
-  while ( c_cur == ' '|| c_cur == '\n' || c_cur == '\r' )
-  {
-    s_str.erase(i_pos,1);
-    c_cur = s_str[++i_pos];
-  }
-
-  // right trim
-  i_pos = s_str.size();
-  c_cur = s_str[s_str.size()];
-
-  while ( c_cur == ' ' || c_cur == '\n' || c_cur == '\0' || c_cur == '\r' )
-  {
-    s_str.erase(i_pos, 1);
-    c_cur = s_str[--i_pos];
-  }
-
-  return s_str;
+  return s_str.substr( b, e - b );
 }
 
 char*
@@ -160,7 +150,7 @@ tool::clean_char( char* c_str )
 string
 tool::replace( string s_string, string s_search, string s_replace )
 {
-  unsigned i_pos[2];
+  size_t i_pos[2];
 
   for ( i_pos[0]  = s_string.find( s_search );
         i_pos[0] != string::npos;
@@ -201,37 +191,75 @@ tool::int2char( int i_int )
 string
 tool::shell_command( string s_command, method m_method )
 {
-  FILE *file;
-  char buf[READBUF];
-  char *c_pos;
-  string s_ret = "";
+  // Execute the CGI file directly via fork/execve - NOT through a shell.
+  // The old popen() ran `/bin/sh -c <s_command>`, so any shell metacharacter
+  // in the URL-derived request path was a command-injection / RCE vector
+  // when httpd.enablecgi=true. s_command must be the full path to an
+  // executable file (reqp's remove_dots already prevents ".." escaping the
+  // template dir, and stat() rejects non-files).
+  (void) m_method; // only METH_RETSTRING is used by the CGI path
 
   wrap::system_message(SHELLEX);
   wrap::system_message(s_command);
 
-  if( (file=popen(s_command.c_str(), "r")) == NULL )
+  struct stat st;
+  if ( stat(s_command.c_str(), &st) != 0 || ! S_ISREG(st.st_mode) )
   {
     wrap::system_message( SHELLER );
+    return "";
   }
-  else
+
+  int fd[2];
+  if ( pipe(fd) != 0 )
   {
-    while(true)
-    {
-      if(fgets(buf, READBUF, file) == NULL)
-        break;
-
-      switch (m_method)
-      {
-      case METH_NCURSES:
-        wrap::system_message( clean_char(buf) );
-        break;
-      default:
-        s_ret.append("\n" + string(buf));
-      } // switch
-    }
-
-    pclose(file);
+    wrap::system_message( SHELLER );
+    return "";
   }
+
+  pid_t pid = fork();
+  if ( pid < 0 )
+  {
+    close(fd[0]); close(fd[1]);
+    wrap::system_message( SHELLER );
+    return "";
+  }
+
+  if ( pid == 0 )
+  {
+    // child: stdout -> pipe, close inherited fds, exec the file (no shell).
+    close(fd[0]);
+    dup2(fd[1], STDOUT_FILENO);
+    close(fd[1]);
+    long l_maxfd = sysconf(_SC_OPEN_MAX);
+    if ( l_maxfd < 0 ) l_maxfd = 256;
+    for ( long i = STDERR_FILENO + 1; i < l_maxfd; ++i )
+      close((int)i);
+    char* argv[] = { const_cast<char*>(s_command.c_str()), (char*) NULL };
+    char* envp[] = { (char*) NULL };
+    execve( s_command.c_str(), argv, envp );
+    _exit(127);
+  }
+
+  // parent: read the CGI output.
+  close(fd[1]);
+  string s_ret;
+  char buf[READBUF];
+  for (;;)
+  {
+    ssize_t n = read(fd[0], buf, sizeof(buf));
+    if ( n > 0 )
+      s_ret.append( buf, n );
+    else if ( n == 0 )
+      break;
+    else if ( errno == EINTR )
+      continue;
+    else
+      break;
+  }
+  close(fd[0]);
+
+  int i_status;
+  waitpid( pid, &i_status, 0 );
 
   return s_ret;
 }

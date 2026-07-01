@@ -174,7 +174,7 @@ conf::get_vector(string s_key)
   vector<string> vec_ret;
   string s_val = get_elem(s_key);
 
-  for (unsigned i_pos = s_val.find(" "); i_pos != string::npos; i_pos = s_val.find(" "))
+  for (size_t i_pos = s_val.find(" "); i_pos != string::npos; i_pos = s_val.find(" "))
   {
     vec_ret.push_back(s_val.substr(0, i_pos));
     s_val = s_val.substr(i_pos+1);

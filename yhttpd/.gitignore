@@ -1,0 +1,12 @@
+bin
+obj/
+g++.version
+make.version
+src/Makefile
+src/includes.add
+src/libs.add
+backuped/
+log/*
+!log/.gitkeep
+*.o
+*.so

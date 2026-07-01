@@ -78,7 +78,7 @@ html::parse( map<string,string> &map_params )
   }
 
   // find %%KEY%% token and substituate those.
-  unsigned pos[2];
+  size_t pos[2];
   pos[0] = pos[1] = 0;
 
   for(;;)

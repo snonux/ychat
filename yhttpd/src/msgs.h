@@ -9,7 +9,7 @@
 #define HTTPDFLO "Chat: Flooding ("
 #define CFILEOK "Parsing config file"
 #define CFILEFA "Failed opening config file!"
-#define CONTACT "Contact: http://www.yChat.org, Mail@yChat.org, ICQ: 11655527"
+#define CONTACT "Contact: https://codeberg.org/snonux/ychat, Mail@yChat.org, ICQ: 11655527"
 #define CLRHTML "HTML: Cleared the document cache "
 #define CLIWELC "Command Line Interface (type help for a list of all commands)"
 #define CLIPRMO ">> "
@@ -125,9 +125,9 @@
 #define XMLER1 "XML Error: Unable to load file "
 #define VERSION "0.8"
 #define BRANCH "CURRENT"
-#define BUILDNR 4003
-#define UNAME "FreeBSD 5.4-DEVEL-p3 i386"
-#define COMPOPT "Using built-in specs.; Configured with: FreeBSD/i386 system compiler; Thread model: posix; gcc version 3.4 [FreeBSD] 20040728; 3.4; g++"
+#define BUILDNR 4027
+#define UNAME "Linux 7.0.11-200.fc44.x86_64 x86_64"
+#define COMPOPT "16; g++"
 #define YCUSAGE "Usage: ./yhttpd {h|v}|{o confkey confvalue}\n"
 
 #define HEADER1 "HTTP/1.1 200 OK\r\n"

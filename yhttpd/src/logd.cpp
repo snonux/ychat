@@ -7,6 +7,9 @@
 #ifdef LOGGING
 
 #include <fstream>
+#include <iostream>
+#include <cstring>
+#include <cerrno>
 
 logd::logd( string s_filename, string s_log_lines )
 {
@@ -62,9 +65,13 @@ logd::flush()
   ofstream of_output;
   of_output.open(s_logfile.c_str(), ios::app);
 
-  if( of_output == NULL )
+  if ( ! of_output.is_open() )
   {
-    wrap::system_message( LOGERR1 + s_logfile );
+    // Log to stderr only; do NOT call wrap::system_message() - that routes
+    // back through LOGD->log_simple_line -> flush on the same failing logd
+    // and would recurse infinitely (stack overflow).
+    cerr << "yhttpd: could not open logfile '" << s_logfile << "' ("
+         << strerror(errno) << ")" << endl;
     exit(1);
   }
 
@@ -118,7 +125,7 @@ void
 logd::set_logfile( string s_path, string s_filename )
 {
   // Remove "/" from filename!
-  unsigned i_pos = s_filename.find( "/" );
+  size_t i_pos = s_filename.find( "/" );
   while ( i_pos != string::npos )
   {
     s_filename.replace( i_pos, 1, "SLASH" );
@@ -149,7 +156,7 @@ logd::flush_logs()
 string
 logd::remove_html_tags( string s_logs )
 {
-  unsigned pos[2];
+  size_t pos[2];
 
   while ( (pos[0] = s_logs.find("<")) != string::npos )
   {

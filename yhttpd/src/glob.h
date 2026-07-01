@@ -24,7 +24,7 @@
 /* - CONFIG -
  Should yhttpd get compiled with comand line interface support?
 */
-#define CLI
+//#define CLI
 
 /* - CONFIG -
  What should be the name of the config file?
@@ -70,7 +70,7 @@
 /* - CONFIG -
  Should yhttpd get compiled with ncurses support?
 */
-#define NCURSES
+//#define NCURSES
 
 /* - CONFIG -
  Please specify the maximum length of a HTTP post request. 
@@ -84,10 +84,18 @@
 #define READBUF 2048
 
 /* - CONFIG -
- Please specify the maximum length of a line read from a socket 
+ Please specify the maximum length of a line read from a socket
  or a file. ( config-file, html-template )
 */
 #define READSOCK 2048
+
+/* - CONFIG -
+ Upper bound (bytes) on how much unread request data sock::_close() will
+ drain from a socket before giving up and closing anyway. Bounds the
+ non-blocking drain loop against a client that keeps streaming data after
+ we've half-closed the connection.
+*/
+#define DRAINMAX 8192
 
 /* - CONFIG -
  In which prefix should yhttpd be installed if typing gmake inst-
@@ -175,7 +183,7 @@
 
 using namespace std;
 
-typedef int function( void *v_arg );
+typedef int mod_func_t( void *v_arg );
 
 struct container
 {
@@ -184,7 +192,7 @@ struct container
 
 struct dynmod
 {
-  function *the_func  ;
+  mod_func_t *the_func  ;
   void     *the_module;
 };
 

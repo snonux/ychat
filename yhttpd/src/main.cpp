@@ -1,5 +1,5 @@
 /*
- * yhttpd; Contact: www.yChat.org; Mail@yChat.org
+ * yhttpd; Contact: https://codeberg.org/snonux/ychat; Mail@yChat.org
  * Copyright (C) 2003 Paul C. Buetow, Volker Richter 
  * Copyright (C) 2004 Paul C. Buetow
  * Copyright (C) 2005 EXA Digital Solutions GbR

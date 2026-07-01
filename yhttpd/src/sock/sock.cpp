@@ -3,6 +3,7 @@
 
 #include <arpa/inet.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <sys/types.h>
 #include <unistd.h>
 
@@ -40,8 +41,39 @@ sock::_read(socketcontainer *p_sock,  char *sz, int len)
 int
 sock::_close(socketcontainer *p_sock)
 {
-  shutdown( p_sock->i_sock, 2 );
-  close   ( p_sock->i_sock    );
+  int i_sock = p_sock->i_sock;
+
+  // read_http() only ever consumes the GET request line (POST bodies are
+  // fully read, but GET headers after the first line are intentionally
+  // skipped) - so the kernel receive buffer usually still has unread
+  // bytes at this point. Closing a socket with unread data makes Linux
+  // send an abortive RST instead of a graceful FIN, which can race the
+  // client's read of the response we just sent and show up as
+  // "connection reset by peer" even though the response was delivered.
+  // The client already sent its whole request before we ever got here
+  // (we already read the first line via blocking reads), so any unread
+  // header bytes are already sitting in the receive buffer - a
+  // non-blocking drain picks them up with no added latency, unlike a
+  // timed wait for a client-initiated close that (for ordinary HTTP
+  // clients waiting on the response) would rarely arrive in time anyway.
+  shutdown( i_sock, SHUT_WR );
+
+  // Skip the drain (fall straight through to close()) if we can't make the
+  // socket non-blocking - reading below would otherwise risk blocking this
+  // worker thread on a client that never sends more data.
+  int i_flags = fcntl( i_sock, F_GETFL, 0 );
+  if ( i_flags != -1 && fcntl( i_sock, F_SETFL, i_flags | O_NONBLOCK ) != -1 )
+  {
+    // Bounded: a client that keeps streaming data after our SHUT_WR could
+    // otherwise keep this non-blocking loop spinning for as long as it
+    // keeps pushing bytes.
+    char c_drain[256];
+    int i_drained = 0;
+    while ( i_drained < DRAINMAX && read( i_sock, c_drain, sizeof(c_drain) ) > 0 )
+      i_drained += sizeof(c_drain);
+  }
+
+  close( i_sock );
   delete p_sock;
 }
 
@@ -292,7 +324,7 @@ sock::read_write(socketcontainer* p_sock)
 
     // get the s_rep ( s_html response which will be send imediatly to the client
     struct sockaddr_in client;
-    size_t size = sizeof(client);
+    socklen_t size = sizeof(client);
 
     getpeername(i_sock, (struct sockaddr *)&client, &size);
 
@@ -353,7 +385,6 @@ sock::start()
 {
   wrap::system_message( SOCKSRV );
   pool* p_pool = wrap::POOL;
-  int i_sock = i_server_sock;
 
 #ifdef NCURSES
 
@@ -361,15 +392,25 @@ sock::start()
   p_pool->print_pool_size();
 #endif
 
-  int i_port = tool::string2int( wrap::CONF->get_elem( "httpd.serverport" ) );
+  // i_server_sock is already a bound listening-socket fd here:
+  // wrap::init_wrapper() (wrap.cpp) calls _make_server_socket() before
+  // start() ever runs. Do not call it again - besides leaking this fd, a
+  // second call goes through sslsock's virtual override too (if OPENSSL
+  // is ever enabled), which would leak the first SSL_CTX and re-read the
+  // cert/key files.
+  int i_sock = i_server_sock;
   _main_loop_init();
 
   int i;
   fd_set active_fd_set, read_fd_set;
   struct sockaddr_in clientname;
-  size_t size;
+  socklen_t size;
 
-  if (listen (i_sock, 1) < 0)
+  // Backlog was hardcoded to 1: with select()'s single accept()-per-wakeup
+  // loop below, any connection arriving while one is already queued got a
+  // kernel-level reset (visible as intermittent connection resets under
+  // concurrent load). SOMAXCONN lets the kernel queue a normal burst.
+  if (listen (i_sock, SOMAXCONN) < 0)
   {
     wrap::system_message( LISTERR );
     exit( EXIT_FAILURE );

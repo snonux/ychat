@@ -38,13 +38,13 @@ clean_modules:
 	@if test -d ./src/mods; then ${MAKE} -C ./src/mods clean; fi
 base:	
 	@if test -f bin/yhttpd; then echo "Backing up old binary";if test -f bin/yhttpd.old; then rm -f bin/yhttpd.old; fi; mv bin/yhttpd bin/yhttpd.old; fi
-	@perl ./scripts/buildnr.pl 
-	@perl ./scripts/setglobvals.pl
+	@perl -I. ./scripts/buildnr.pl 
+	@perl -I. ./scripts/setglobvals.pl
 	@${MAKE} -C ./src 
 clean_base:
 	@${MAKE} -C ./src clean
 stats:
-	@perl scripts/stats.pl
+	@perl -I. scripts/stats.pl
 run: 
 	./bin/yhttpd
 base_start: base 

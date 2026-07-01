@@ -22,7 +22,7 @@ void
 reqp::get_request_parameters( string s_parameters, map<string,string>& map_params )
 {
   string s_tmp;
-  unsigned i_pos, i_pos2;
+  size_t i_pos, i_pos2;
 
   while( (i_pos = s_parameters.find("&")) != string::npos )
   {
@@ -46,7 +46,7 @@ reqp::get_request_parameters( string s_parameters, map<string,string>& map_param
 string
 reqp::get_url( string s_req, map<string, string> &map_params, int& i_postpayloadoffset )
 {
-  unsigned i_pos, i_pos2;
+  size_t i_pos, i_pos2;
   string s_vars( "" );
   string s_ret;
   int i_req;
@@ -111,7 +111,6 @@ reqp::get_url( string s_req, map<string, string> &map_params, int& i_postpayload
 
   if ( s_ret.empty() )
     s_ret = wrap::CONF->get_elem( "httpd.startsite" );
-
   else
     s_ret = remove_dots(s_ret);
 
@@ -211,7 +210,7 @@ reqp::url_decode( string s_url )
 string
 reqp::get_from_header( string s_req, string s_hdr )
 {
-  unsigned i_pos[2];
+  size_t i_pos[2];
   if ( (i_pos[0] = s_req.find( s_hdr, 0 )) == string::npos )
     return "";
 
@@ -274,7 +273,7 @@ string
 reqp::remove_dots( string s_ret )
 {
   // remove ".." from the request.
-  unsigned i_pos;
+  size_t i_pos;
 
   if ( (i_pos = s_ret.find( ".." )) != string::npos )
     return remove_dots(s_ret.substr(0, i_pos));
