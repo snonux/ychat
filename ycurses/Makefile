@@ -27,13 +27,13 @@ deinstall:
 	@exit 1
 base:	
 	@if test -f bin/ycurses; then echo "Backing up old binary";if test -f bin/ycurses.old; then rm -f bin/ycurses.old; fi; mv bin/ycurses bin/ycurses.old; fi
-	@perl ./scripts/buildnr.pl 
-	@perl ./scripts/setglobvals.pl
-	@${MAKE} -C ./src 
+	@perl -I. ./scripts/buildnr.pl
+	@perl -I. ./scripts/setglobvals.pl
+	@${MAKE} -C ./src
 clean_base:
 	@${MAKE} -C ./src clean
 stats:
-	@perl scripts/stats.pl
+	@perl -I. scripts/stats.pl
 run: 
 	./bin/ycurses
 base_start: base 

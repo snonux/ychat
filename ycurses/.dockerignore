@@ -1,0 +1,7 @@
+obj
+bin
+backuped
+*.version
+src/Makefile
+src/includes.add
+src/libs.add

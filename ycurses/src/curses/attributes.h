@@ -22,10 +22,15 @@ const int CharText = A_CHARTEXT;
 class attributes 
 {
 private:
-  void init();  
+  void init();
   set<int> set_attr;
   bool get(int i_attr);
-  void set(bool b, int i_attr);
+  // Named set_attr_flag (not "set") because a member named exactly "set"
+  // here would collide with std::set - "using namespace std" makes both
+  // visible and GCC treats declaring the member as ill-formed ("changes
+  // meaning of 'set'"). Same class of fix as the function->mod_func_t
+  // rename in ychat/yhttpd's glob.h.
+  void set_attr_flag(bool b, int i_attr);
   color* p_color;
 
   friend class window;
@@ -37,22 +42,22 @@ public:
   attributes(int i_attr);
   attributes(color& r_color);
 
-  void set(int i_attr) { set(true, i_attr); }
-  void unset(int i_attr ) { set(false, i_attr); }
+  void set_attr_flag(int i_attr) { set_attr_flag(true, i_attr); }
+  void unset(int i_attr ) { set_attr_flag(false, i_attr); }
   void unset_all();
   void set_color(color& r_color);
 
-  void set_normal(bool b) { set(b, Normal); }
-  void set_standout(bool b) { set(b, Standout); }
-  void set_underline(bool b) { set(b, Underline); }
-  void set_reverse(bool b) { set(b, Reverse); }
-  void set_blink(bool b) { set(b, Blink); }
-  void set_dim(bool b) { set(b, Dim); }
-  void set_bold(bool b) { set(b, Bold); }
-  void set_protect(bool b) { set(b, Protect); }
-  void set_invisible(bool b) { set(b, Invis); }
-  void set_altcharset(bool b) { set(b, AltCharSet); }
-  void set_chartext(bool b) { set(b, CharText); }
+  void set_normal(bool b) { set_attr_flag(b, Normal); }
+  void set_standout(bool b) { set_attr_flag(b, Standout); }
+  void set_underline(bool b) { set_attr_flag(b, Underline); }
+  void set_reverse(bool b) { set_attr_flag(b, Reverse); }
+  void set_blink(bool b) { set_attr_flag(b, Blink); }
+  void set_dim(bool b) { set_attr_flag(b, Dim); }
+  void set_bold(bool b) { set_attr_flag(b, Bold); }
+  void set_protect(bool b) { set_attr_flag(b, Protect); }
+  void set_invisible(bool b) { set_attr_flag(b, Invis); }
+  void set_altcharset(bool b) { set_attr_flag(b, AltCharSet); }
+  void set_chartext(bool b) { set_attr_flag(b, CharText); }
 
   bool get_normal() { return get(Normal); }
   bool get_standout() { return get(Standout); }

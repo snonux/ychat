@@ -51,8 +51,11 @@ perl -e '
    $ENV{HOME}."/lib",
    $ENV{HOME}."/usr/lib",
    "/lib",
+   "/lib64",
    "/usr/lib",
+   "/usr/lib64",
    "/usr/local/lib",
+   "/usr/local/lib64",
    "/usr/pkg/lib",
    "/opt/lib",
    "/opt/local/lib"

@@ -11,7 +11,7 @@ attributes::attributes()
 attributes::attributes(int i_attr)
 {
   init();
-  set(true, i_attr);
+  set_attr_flag(true, i_attr);
 }
 
 attributes::attributes(color& r_color)
@@ -63,7 +63,7 @@ attributes::get(int i_attr)
 }
 
 void
-attributes::set(bool b, int i_attr)
+attributes::set_attr_flag(bool b, int i_attr)
 {
   if ((set_attr.find(i_attr) != set_attr.end() ) == b)
     return;

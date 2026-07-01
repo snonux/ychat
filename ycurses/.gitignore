@@ -1,0 +1,10 @@
+bin
+obj/
+g++.version
+make.version
+src/Makefile
+src/includes.add
+src/libs.add
+backuped/
+*.o
+*.so

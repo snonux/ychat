@@ -51,17 +51,25 @@ perl -e '
  }
  &check_make;
  print "Checking compiler version\n";
- my $r = 0;
- for (my $i = 4; $i > 0 && $r == 0; --$i ) {
-    $r = &check_gcc(3,$i);
- }
- if ($r == 0) {
-  print "No suitable g++ compiler found!\n"; 
-  print "Please install a right version of GNU G++!\n";
+ # Accept any GNU g++ (the original check only accepted g++ 3.x; modern GCC
+ # works fine with the legacy-C++ fixes applied). Write g++.version as
+ # "<version>\ng++\n" - src/configure reads the last line as the compiler.
+ my $ver = `g++ -dumpversion 2>/dev/null`;
+ chomp $ver;
+ if ( $ver eq "" ) {
+  print "No GNU g++ compiler found!\nPlease install GNU G++!\n";
   exit(1);
  }
- 
- system("perl \"scripts/config.pl\"");
+ `echo $ver > g++.version`;
+ `echo g++ >> g++.version`;
+ print "GNU G++ $ver found!\n";
+
+ # -I. : scripts/config.pl does "use scripts::modules::file", which needs
+ # "." on @INC. Perl 5.26+ dropped "." from the default @INC, so this
+ # silently BEGIN-failed on modern Perl (the "yes" answer was never even
+ # read - it happened to be harmless only because the committed glob.h
+ # defaults were already correct).
+ system("perl -I. \"scripts/config.pl\"");
  chdir("src");
  system("./configure ".join(" ", @ARGV));
  chdir("..");
