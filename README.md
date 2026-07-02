@@ -6,15 +6,13 @@ are kept here as historical/revival code.
 
 | Subproject | What it is | Status |
 |------------|------------|--------|
-| [`./ychat`](ychat/)   | An HTTP-based web chat server (browsers are the clients; CSS/HTML/JS only). | **Revived & deployed** — Mode A (in-memory guest chat) builds in Docker, runs on the f3s k3s cluster. Mode B (embedded SQLite, real persistent accounts) builds and works locally — see [`ychat/DOCKER-SQLITE.md`](ychat/DOCKER-SQLITE.md) — but isn't deployed. |
+| [`./ychat`](ychat/)   | An HTTP-based web chat server (browsers are the clients; CSS/HTML/JS only). | **Revived, builds in Docker with a mandatory embedded-SQLite backend** (real, persistent registered accounts) — see [`ychat/DOCKER.md`](ychat/DOCKER.md). Builds and is verified locally; **not yet deployed** to f3s — the live cluster (`https://ychat.f3s.lan.buetow.org/`) still runs an older, in-memory-only, no-database image. |
 | [`./yhttpd`](yhttpd/) | A tiny standalone http server derived from ychat's socket/threading engine. | Builds and serves reliably in Docker (verified under concurrent load) — not deployed. See [`./yhttpd/DOCKER.md`](yhttpd/DOCKER.md). |
 | [`./ycurses`](ycurses/) | A curses front-end experiment. | Builds and runs in Docker (a demo, not a service, so nothing to deploy) — see [`./ycurses/BUILD.md`](ycurses/BUILD.md). |
 
 The detailed, up-to-date build/deploy notes for the chat live in
-[`./ychat/DOCKER.md`](ychat/DOCKER.md) (Mode A) and
-[`./ychat/DOCKER-SQLITE.md`](ychat/DOCKER-SQLITE.md) (Mode B). The rest of
-this file is a quickstart for running **ychat** locally in Docker and
-accessing it.
+[`./ychat/DOCKER.md`](ychat/DOCKER.md). The rest of this file is a
+quickstart for running **ychat** locally in Docker and accessing it.
 
 > The ychat tree has been substantially fixed during this revival (legacy-C++
 > build fixes, a from-scratch streaming-chat layer, and a security/bug sweep).
@@ -38,15 +36,17 @@ podman build -t ychat:dev .
 # or:  docker build -t ychat:dev .
 ```
 
-The build configures ychat with all optional features off (no SSL, no MySQL,
-no readline) — this is "Mode A": an **in-memory guest chat with no account
-database**. The default chat port is **2000**.
+The build configures ychat with SSL and readline off, but a database is not
+optional: `./configure` always requires SQLite (`sqlite3.h`/`libsqlite3`),
+so registration/login persist in a SQLite file across container restarts.
+The default chat port is **2000**.
 
 ### 2. Run it
 
 ```sh
-podman run --rm -p 2000:2000 --name ychat ychat:dev
-# or:  docker run --rm -p 2000:2000 --name ychat ychat:dev
+mkdir -p /tmp/ychat-data && chmod 777 /tmp/ychat-data   # see DOCKER.md for why
+podman run --rm -p 2000:2000 --name ychat -v /tmp/ychat-data:/app/data:Z ychat:dev
+# or:  docker run --rm -p 2000:2000 --name ychat -v /tmp/ychat-data:/app/data ychat:dev
 ```
 
 The server logs to stdout. You should see something like:
@@ -62,8 +62,10 @@ Initializing sock events (1)
 
 Open http://localhost:2000/ in a browser.
 
-- You'll get the **guest login page** (no password field, no "Register" link —
-  there is no account database in this build).
+- You'll get the full login page (password field + "Register" link). You can
+  register a nick/password (persisted in the SQLite file under
+  `/app/data`), or leave the password blank and log in as an unregistered
+  guest — `chat.enableguest=true` allows that regardless of the database.
 - Enter any alphanumeric nick (e.g. `alice`), leave the room as `Lounge`, and
   click **login**.
 - The chat frameset loads: a streaming message view, the online-user list, and
@@ -93,32 +95,38 @@ podman rm -f ychat
 
 ## Notes on the local run
 
-- **State is in-memory only.** With no database, all users/sessions/rooms live
-  in RAM and are wiped on container restart. That's intentional for the
-  revival; `chat.enableguest=true` lets anyone log in with just a nick.
+- **Registered accounts persist; guest sessions don't.** The SQLite file at
+  `/app/data/ychat.db` (bind-mount it, as above, to survive container
+  restarts) holds registered users. Sessions/rooms/online-state are still
+  in-memory, and unregistered `chat.enableguest=true` guest chatters are
+  wiped on restart same as before — only the accounts table persists.
 - **Logs** go to `/app/log/` inside the container (`access_log`, `system_log`,
   `rooms/<room>`). They're an `emptyDir` in k8s and a container-local dir
   locally, so they don't persist after `rm`.
 - **Configuration** is `ychat/etc/ychat.conf`, baked into the image at
   `/app/etc/ychat.conf`. You can override any config key at runtime with
   `-o <key> <value>` (the image already does this for
-  `chat.session.md5hash=false` and `httpd.startsite=index_guest.html`).
+  `chat.session.md5hash=false` and `chat.database.dbname=data/ychat.db`).
   Example: `podman run --rm -p 2000:2000 ychat:dev /app/bin/ychat -o chat.idle.timeout 300`.
-- **No operator commands for guests.** The default-operator escalation
-  (`/exec` shell RCE) was removed for security; in this no-DB build there is no
-  authenticated operator, so privileged commands (`/ko`, `/ban`, `/exec`, …)
-  are unavailable by design.
+- **The `/exec` command module is removed from the image entirely**
+  (defense-in-depth against its shell-injection RCE), and operator status
+  via `chat.defaultop` now requires a database-authenticated registered
+  account — an unregistered guest can never claim it. Other privileged
+  commands (`/ko`, `/ban`, …) work normally for a registered operator.
 
 ---
 
 ## Deploying to the f3s k3s cluster
 
-This is covered in detail in [`./ychat/DOCKER.md`](ychat/DOCKER.md). In short:
-the image is pushed to the f3s private registry
-(`r0.lan.buetow.org:30001/ychat:<tag>`), and a Helm chart + ArgoCD Application
-in the [`conf` repo](https://codeberg.org/snonux/conf) (path
-`f3s/ychat/helm-chart`) deploy it. The LAN URL is
-**https://ychat.f3s.lan.buetow.org/**.
+This is covered in detail in [`./ychat/DOCKER.md`](ychat/DOCKER.md) (push
+steps, Helm chart, ArgoCD Application in the
+[`conf` repo](https://codeberg.org/snonux/conf), path
+`f3s/ychat/helm-chart`). **The DB-backed build described in this README is
+not deployed there yet** — the live LAN URL
+(**https://ychat.f3s.lan.buetow.org/**) currently still serves the older,
+in-memory-only, no-database image. Rolling out this build needs a persistent
+volume for `/app/data` (the existing Helm chart doesn't provision one) and
+is a deliberate follow-up, not automatic.
 
 ---
 

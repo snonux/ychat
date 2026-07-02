@@ -9,7 +9,6 @@ AC_ARG_ENABLE(readline, AC_HELP_STRING([--disable-readline], [Disables readline 
 AC_ARG_ENABLE(readline, AC_HELP_STRING([--disable-readline], [Disables readline support (default=yes)]))
 AC_ARG_ENABLE(ssl, AC_HELP_STRING([--enable-ssl], [Enable OpenSSL support (default=no)]))
 AC_ARG_ENABLE(mysqlclient, AC_HELP_STRING([--enable-mysql], [Enable MySQL support (default=no)]))
-AC_ARG_ENABLE(sqlite, AC_HELP_STRING([--enable-sqlite], [Enable embedded SQLite support (default=no)]))
 
 header_error() AC_MSG_ERROR([Could not find required header, please check the installation of the required header])
 lib_error() AC_MSG_ERROR([Library test failed, please check the installation of the required library])
@@ -19,6 +18,16 @@ echo "===> Checking for dependencies"
 AC_CHECK_HEADERS(dlfcn.h netinet/in.h time.h pthread.h event.h, [], [header_error])
 AC_CHECK_LIB(pthread, pthread_create, [], [lib_error])
 AC_CHECK_LIB(event, event_init, [], [lib_error])
+
+# Embedded SQLite is the only supported database backend (no --enable-sqlite
+# opt-in, no way to configure without it): unlike MySQL/SSL/readline below,
+# ychat always expects a database for persistent accounts, so this is checked
+# unconditionally, the same way pthread/event are, and header_error/lib_error
+# abort configure if it's missing rather than silently falling back to a
+# database-less build (the old "Mode A" in-memory guest chat, now removed).
+echo "===> Configuring with embedded SQLite (required - the only supported database backend)"
+AC_CHECK_HEADERS(sqlite3.h, [], [header_error])
+AC_CHECK_LIB(sqlite3, sqlite3_open, [], [lib_error])
 
 echo -n "===> Configuring with SSL "
 if test -z $enable_ssl || test $enable_ssl != "yes"; then
@@ -36,15 +45,6 @@ else
   echo enabled
   AC_CHECK_HEADERS(mysql/mysql.h, [], [header_error])
   AC_CHECK_LIB(mysqlclient, mysql_init, [], [lib_error])
-fi
-
-echo -n "===> Configuring with SQLite "
-if test -z $enable_sqlite || test $enable_sqlite != "yes"; then
-  echo disabled
-else
-  echo enabled
-  AC_CHECK_HEADERS(sqlite3.h, [], [header_error])
-  AC_CHECK_LIB(sqlite3, sqlite3_open, [], [lib_error])
 fi
 
 echo -n "===> Configuring with readline "
