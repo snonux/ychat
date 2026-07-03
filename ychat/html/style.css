@@ -76,6 +76,10 @@ input[type="submit"], input[type="button"] {
   padding: 4px 6px;
 }
 
+.input-links a {
+  white-space: nowrap;
+}
+
 h1, h2, h3 {
   padding: 5px;
   color: #000000;
@@ -171,9 +175,27 @@ body.chatlayout {
     border-left: 0;
     border-top: 1px solid #555555;
   }
-  /* Input controls wrap onto two lines on narrow screens (see input.html),
-     so the input frame needs more height than the desktop 70px. */
+  /* Input controls take two rows on narrow screens (see input.html): the
+     message box on its own row, and the link row below it. The link row's
+     height is now predictable (see .input-links rules below), so this only
+     needs to fit those two rows, not an unbounded number of wrapped lines. */
   .chatlayout-bottom {
-    flex: 0 0 108px;
+    flex: 0 0 96px;
+  }
+
+  /* Six popup links plus a scroll toggle wrap onto several lines at 16px on
+     a phone-width screen, which is what actually ate the vertical space.
+     Shrinking the text and letting the row scroll horizontally instead of
+     wrapping keeps it to one line, and the "Scrolling:" label is dropped in
+     favor of the checkbox's title tooltip since there's no room for it. */
+  .input-links {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    gap: 10px;
+    font-size: 13px;
+  }
+  .scroll-label {
+    display: none;
   }
 }

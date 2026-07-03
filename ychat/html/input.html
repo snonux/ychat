@@ -52,8 +52,8 @@
     <a href='#' class="fancy" onclick="javascript:popup('loggedin.html?event=loggedin&tmpid=%%tmpid%%', 600, 480)">Users</a>
     <a href='#' class="fancy" onclick="javascript:popup('admin.html?event=admin&tmpid=%%tmpid%%', 600, 480)">Admin</a>
     <a href='input.html?event=input&tmpid=%%tmpid%%&message=%2Fq' class="fancy" target='blank'>Logout</a>
-    Scrolling: 
-    <input type="checkbox" name="scroll" checked onClick="chgscroll(this);" />
+    <span class="scroll-label">Scrolling:</span>
+    <input type="checkbox" name="scroll" checked title="Auto-scroll" onClick="chgscroll(this);" />
    </div>
    <input type="hidden" name="event" value="input" /> 
    <input type="hidden" name="tmpid" value="%%tmpid%%" /> 
