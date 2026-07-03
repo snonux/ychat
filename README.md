@@ -6,7 +6,7 @@ are kept here as historical/revival code.
 
 | Subproject | What it is | Status |
 |------------|------------|--------|
-| [`./ychat`](ychat/)   | An HTTP-based web chat server (browsers are the clients; CSS/HTML/JS only). | **Revived, builds in Docker with a mandatory embedded-SQLite backend** (real, persistent registered accounts) — see [`ychat/DOCKER.md`](ychat/DOCKER.md). Builds and is verified locally; **not yet deployed** to f3s — the live cluster (`https://ychat.f3s.lan.buetow.org/`) still runs an older, in-memory-only, no-database image. |
+| [`./ychat`](ychat/)   | An HTTP-based web chat server (browsers are the clients; CSS/HTML/JS only). | **Revived, builds in Docker with a mandatory embedded-SQLite backend** (real, persistent registered accounts) — see [`ychat/DOCKER.md`](ychat/DOCKER.md). **Deployed to f3s** (`https://ychat.f3s.lan.buetow.org/`) with a persistent volume backing `/app/data`, image tag `67babb2`. |
 | [`./yhttpd`](yhttpd/) | A tiny standalone http server derived from ychat's socket/threading engine. | Builds and serves reliably in Docker (verified under concurrent load) — not deployed. See [`./yhttpd/DOCKER.md`](yhttpd/DOCKER.md). |
 | [`./ycurses`](ycurses/) | A curses front-end experiment. | Builds and runs in Docker (a demo, not a service, so nothing to deploy) — see [`./ycurses/BUILD.md`](ycurses/BUILD.md). |
 
@@ -121,9 +121,12 @@ podman rm -f ychat
 Deploying ychat to the f3s homelab k3s cluster (image build/push, Helm chart,
 ArgoCD Application, PVC requirements) is **not** documented here — it lives in
 the private `f3s` skill reference, since it depends on homelab-specific
-infrastructure. **The DB-backed build described in this README is not deployed
-there yet** — the live LAN URL (**https://ychat.f3s.lan.buetow.org/**)
-currently still serves the older, in-memory-only, no-database image.
+infrastructure. **The DB-backed build described in this README is now
+deployed** — the live LAN URL (**https://ychat.f3s.lan.buetow.org/**) serves
+image tag `67babb2` with a persistent volume (`ychat-data-pvc`, hostPath-backed
+NFS share) mounted at `/app/data`, so registered accounts survive pod
+restarts. Chart/manifests live in the `conf` repo under
+`f3s/ychat/helm-chart/`.
 
 ---
 
