@@ -118,10 +118,9 @@ podman rm -f ychat
 
 ## Deploying to the f3s k3s cluster
 
-Deploying ychat to the f3s homelab k3s cluster (image build/push, Helm chart,
-ArgoCD Application, PVC requirements) is **not** documented here — it lives in
-the private `f3s` skill reference, since it depends on homelab-specific
-infrastructure. **The DB-backed build described in this README is now
+Deploying ychat to a homelab k3s cluster (image build/push, Helm chart,
+ArgoCD Application, PVC requirements) is homelab-specific and **not**
+documented in this public repo. **The DB-backed build described in this README is now
 deployed** — the live LAN URL (**https://ychat.f3s.lan.buetow.org/**) serves
 image tag `67babb2` with a persistent volume (`ychat-data-pvc`, hostPath-backed
 NFS share) mounted at `/app/data`, so registered accounts survive pod

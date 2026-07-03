@@ -165,9 +165,8 @@ part of removing the no-DB build option from the codebase.
 ## Deploying to the f3s k3s cluster
 
 Homelab-specific deployment (image push to the private registry, Helm chart,
-ArgoCD Application, PVC for `/app/data`) is **not** documented here — it lives
-in the private `f3s` skill reference, since it depends on homelab
-infrastructure. It is **not yet deployed**: the live cluster
+ArgoCD Application, PVC for `/app/data`) is homelab-specific and **not**
+documented in this public repo. It is **not yet deployed**: the live cluster
 (`https://ychat.f3s.lan.buetow.org/`) still runs the old no-DB image.
 
 ## Optional follow-ups (not in scope for this task)
