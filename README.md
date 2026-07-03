@@ -118,15 +118,12 @@ podman rm -f ychat
 
 ## Deploying to the f3s k3s cluster
 
-This is covered in detail in [`./ychat/DOCKER.md`](ychat/DOCKER.md) (push
-steps, Helm chart, ArgoCD Application in the
-[`conf` repo](https://codeberg.org/snonux/conf), path
-`f3s/ychat/helm-chart`). **The DB-backed build described in this README is
-not deployed there yet** — the live LAN URL
-(**https://ychat.f3s.lan.buetow.org/**) currently still serves the older,
-in-memory-only, no-database image. Rolling out this build needs a persistent
-volume for `/app/data` (the existing Helm chart doesn't provision one) and
-is a deliberate follow-up, not automatic.
+Deploying ychat to the f3s homelab k3s cluster (image build/push, Helm chart,
+ArgoCD Application, PVC requirements) is **not** documented here — it lives in
+the private `f3s` skill reference, since it depends on homelab-specific
+infrastructure. **The DB-backed build described in this README is not deployed
+there yet** — the live LAN URL (**https://ychat.f3s.lan.buetow.org/**)
+currently still serves the older, in-memory-only, no-database image.
 
 ---
 

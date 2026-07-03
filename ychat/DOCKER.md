@@ -162,34 +162,16 @@ this DB-backed build out is a separate, deliberate decision (needs a
 persistent volume for `/app/data`, updated Helm chart, etc.) — not done as
 part of removing the no-DB build option from the codebase.
 
-## Push to the f3s registry
+## Deploying to the f3s k3s cluster
 
-```sh
-TAG=$(git rev-parse --short HEAD)
-podman tag ychat:$TAG r0.lan.buetow.org:30001/ychat:$TAG
-podman tag ychat:latest r0.lan.buetow.org:30001/ychat:latest
-podman push --tls-verify=false r0.lan.buetow.org:30001/ychat:$TAG
-podman push --tls-verify=false r0.lan.buetow.org:30001/ychat:latest
-```
-
-## Deploy (GitOps)
-
-Config lives in the `conf` repo (mirrored on the in-cluster git-server):
-
-- Helm chart: `f3s/ychat/helm-chart`
-- ArgoCD app: `f3s/argocd-apps/services/ychat.yaml`
-
-The Deployment pulls `registry.lan.buetow.org:30001/ychat:<TAG>` (tag matches
-`appVersion` in `Chart.yaml`). Logs go to an `emptyDir` on `/app/log` —
-ephemeral by design. The SQLite database at `/app/data` needs a real
-persistent volume (PVC) to survive pod rescheduling — the current Helm chart
-was written for the no-DB build and doesn't provision one yet; see "History"
-above.
+Homelab-specific deployment (image push to the private registry, Helm chart,
+ArgoCD Application, PVC for `/app/data`) is **not** documented here — it lives
+in the private `f3s` skill reference, since it depends on homelab
+infrastructure. It is **not yet deployed**: the live cluster
+(`https://ychat.f3s.lan.buetow.org/`) still runs the old no-DB image.
 
 ## Optional follow-ups (not in scope for this task)
 
 - Port to a modern toolchain (`hash_map`→`unordered_map`, fix implicit
   returns, modernise `configure.ac`) and drop the legacy-C++ patches.
 - Fix plaintext password storage/comparison.
-- Actually deploy this build to f3s (PVC for `/app/data`, updated Helm
-  chart, ArgoCD sync) — a human decision, not automated here.
