@@ -56,12 +56,18 @@ con::con()
     usleep( 30000000 );
   }
 
-  // Multiple pooled connections open the same file concurrently: WAL lets
-  // readers and a writer coexist, and the busy timeout makes a writer wait
-  // for a lock instead of failing immediately with SQLITE_BUSY (this data
-  // layer has no query-retry logic of its own).
+  // Multiple pooled connections open the same file concurrently, so a
+  // writer needs to wait for a lock instead of failing immediately with
+  // SQLITE_BUSY (this data layer has no query-retry logic of its own) --
+  // the busy timeout handles that. journal_mode is deliberately left at
+  // SQLite's default (DELETE/rollback journal), NOT WAL: the database file
+  // typically lives on a network filesystem (an NFS-backed hostPath PV in
+  // the f3s deployment), and WAL requires shared-memory mmap of a -shm file
+  // that network filesystems don't support reliably -- using WAL there
+  // corrupted the database ("disk image is malformed") the first time two
+  // connections opened it. The rollback journal only needs ordinary
+  // byte-range locks, which NFS handles correctly.
   sqlite3_busy_timeout( p_sqlite, 5000 );
-  sqlite3_exec( p_sqlite, "PRAGMA journal_mode=WAL", NULL, NULL, NULL );
   sqlite3_exec( p_sqlite, "PRAGMA foreign_keys=ON", NULL, NULL, NULL );
 
   char* c_err = NULL;
