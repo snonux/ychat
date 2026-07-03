@@ -3,10 +3,53 @@ body {
   font-family: arial, verdana;
   background-color: #000000;
   color: #FFFFFF;
+  margin: 0;
+  /* Breathing room on narrow viewports; the chat layout (body.chatlayout,
+     see below) needs the full viewport instead and overrides this back to 0. */
+  padding: 10px;
 }
 
 body.stream {
   background-color: #333333;
+}
+
+/* Text inputs used fixed "size" (character count) attributes sized for desktop
+   (e.g. size=60 for the chat message box), which overflow a ~375px phone
+   screen. CSS width wins over the size attribute, so capping it here fixes
+   every such input without having to edit each template. 16px font-size stops
+   iOS Safari from auto-zooming the page when a field is focused. */
+.text {
+  max-width: 100%;
+  box-sizing: border-box;
+  font-size: 16px;
+  padding: 4px;
+}
+
+input[type="submit"], input[type="button"] {
+  font-size: 16px;
+  padding: 8px 14px;
+  min-height: 40px;
+}
+
+/* Tables (e.g. the colors picker, admin/help content) were laid out for
+   desktop width and are not otherwise reflowed for mobile; let them scroll
+   horizontally instead of blowing out the page width. */
+@media (max-width: 480px) {
+  table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+/* input.html's message box + link row, replacing the old absolute-positioned
+   divs (which had fixed pixel offsets and did not reflow) with a wrapping
+   flex row so controls stack instead of clipping on narrow screens. */
+.input-row, .input-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
 }
 
 h1, h2, h3 {
@@ -41,4 +84,72 @@ a {
 a:hover {
   color: #00FF00;
   text-decoration: none;
+}
+
+/* Layout for frameset.html. A classic HTML <frameset> cannot reflow for
+   narrow viewports (its cols/rows split is a fixed HTML attribute, not CSS,
+   so no media query can touch it) and framesets are deprecated/inconsistently
+   supported in modern mobile browsers. The same four panes (stream, online,
+   input, blank) are therefore built from named iframes inside a flexbox
+   layout, which behaves the same for the cross-frame JS (parent.stream.*)
+   since named iframes are exposed on window just like frameset frames, but
+   lets a media query restack the panes on small screens. */
+body.chatlayout {
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.chatlayout-top {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.stream-frame {
+  flex: 1 1 auto;
+  border: 0;
+}
+
+.online-frame {
+  flex: 0 0 150px;
+  border: 0;
+  border-left: 1px solid #555555;
+}
+
+.chatlayout-bottom {
+  flex: 0 0 70px;
+  display: flex;
+}
+
+.input-frame {
+  flex: 1 1 auto;
+  border: 0;
+}
+
+/* Sink frame for form targets, kept out of the layout instead of the former
+   0-height frame row; navigating a hidden named iframe still works. */
+.blank-frame {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  /* Userlist moves below the message stream as a short horizontal strip
+     instead of eating ~40% of a phone's width as a 150px side column. */
+  .chatlayout-top {
+    flex-direction: column;
+  }
+  .online-frame {
+    flex: 0 0 90px;
+    border-left: 0;
+    border-top: 1px solid #555555;
+  }
+  /* Input controls wrap onto two lines on narrow screens (see input.html),
+     so the input frame needs more height than the desktop 70px. */
+  .chatlayout-bottom {
+    flex: 0 0 108px;
+  }
 }

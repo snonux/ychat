@@ -2,6 +2,7 @@
 <html>
 <head>
  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>%%HTML_TITLE_TAG_CONTENT%%</title>
   <link rel="stylesheet" href="style.css" type=text/css />
   <script language="JavaScript">
@@ -36,12 +37,15 @@
  </head>
  <body>
   <form method="GET" name="input" action="input.html" target="blank" onsubmit="return delout();">
-   <div style="position: absolute; top: 5px;"> 
+   <!-- Was two position:absolute rows with fixed pixel offsets, which does
+        not reflow; a wrapping flex row (see .input-row/.input-links in
+        style.css) lets the controls stack on narrow screens instead. -->
+   <div class="input-row">
     <input class="text" type="text"   name="message" size="60" maxlength="%%chat.maxlength.message%%" />
     <input type="submit" value="Send" accesskey='s' />
     <input type="button" value="Select"  accesskey='e' onclick="javascript:selectinput();" />
    </div>
-   <div style="position: absolute; top: 29px;"> 
+   <div class="input-links">
     <a href='#' class="fancy" onclick="javascript:popup('colors.html?event=colors&tmpid=%%tmpid%%', 600, 480)">Colors</a>
     <a href='#' class="fancy" onclick="javascript:popup('options.html?event=options&tmpid=%%tmpid%%', 600, 480)">Options</a>
     <a href='#' class="fancy" onclick="javascript:popup('help.html?event=help&tmpid=%%tmpid%%', 600, 480)">Help</a>

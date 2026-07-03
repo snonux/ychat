@@ -2,19 +2,20 @@
 <html>
  <head>
  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
  <title>%%ychat.version%%</title>
+ <link rel="stylesheet" href="style.css" type="text/css" />
  </head>
- <frameset boders="0" rows="*,70">
-  <noframes>
-   Your browser does not support frames!
-  </noframes>
-  <frameset cols="*,150">
-   <frame src="stream.html?event=stream&tmpid=%%tmpid%%" name="stream" />
-   <frame src="online.html?event=online&tmpid=%%tmpid%%" name="online" />
-  </frameset>
-  <frameset rows="*,0">
-   <frame src="input.html?event=input&tmpid=%%tmpid%%" name="input" />
-   <frame src="blank.html" name="blank" />
-  </frameset>
- </frameset>
+ <!-- See body.chatlayout in style.css for why this is iframes + flexbox
+      instead of a <frameset>: framesets can't reflow for mobile viewports. -->
+ <body class="chatlayout">
+  <div class="chatlayout-top">
+   <iframe class="stream-frame" src="stream.html?event=stream&tmpid=%%tmpid%%" name="stream">Your browser does not support iframes!</iframe>
+   <iframe class="online-frame" src="online.html?event=online&tmpid=%%tmpid%%" name="online">Your browser does not support iframes!</iframe>
+  </div>
+  <div class="chatlayout-bottom">
+   <iframe class="input-frame" src="input.html?event=input&tmpid=%%tmpid%%" name="input">Your browser does not support iframes!</iframe>
+   <iframe class="blank-frame" src="blank.html" name="blank"></iframe>
+  </div>
+ </body>
 </html>
