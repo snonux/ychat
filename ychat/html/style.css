@@ -13,6 +13,20 @@ body.stream {
   background-color: #333333;
 }
 
+.register-hint {
+  margin-top: 20px;
+}
+
+/* The input frame is a short, fixed-height strip (see .chatlayout-bottom)
+   holding two wrapped rows of controls; the default 10px body padding eats
+   into that budget on narrow screens, and overflow-y:auto is a safety net
+   so controls scroll into view instead of being clipped if they still don't
+   fit (e.g. very small phones/landscape). */
+body.inputframe {
+  padding: 4px 6px;
+  overflow-y: auto;
+}
+
 /* Text inputs used fixed "size" (character count) attributes sized for desktop
    (e.g. size=60 for the chat message box), which overflow a ~375px phone
    screen. CSS width wins over the size attribute, so capping it here fixes
@@ -23,6 +37,16 @@ body.stream {
   box-sizing: border-box;
   font-size: 16px;
   padding: 4px;
+}
+
+/* Flex items default to min-width:auto, which for an <input> resolves to
+   its size="..." attribute width, not its rendered CSS width -- so
+   max-width:100% alone doesn't let the message box shrink to fit next to
+   the Send/Select buttons on a narrow screen. min-width:0 overrides that,
+   and flex:1 1 auto makes it (not the buttons) absorb the available space. */
+.input-row .text {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 input[type="submit"], input[type="button"] {
