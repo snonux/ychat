@@ -78,7 +78,29 @@ reqp::parse(context *p_context)
       }
       else
       {
+        // The session is invalid/expired (no tmpid match). The old code
+        // returned here with an empty response, leaving the browser with a
+        // blank page. Instead serve a small redirect page (redirect.html)
+        // that does a *top-level* JS redirect back to the login page, so the
+        // whole chat window returns to the login form rather than rendering
+        // three stacked login forms inside the frameset's iframes.
         wrap::system_message(SESSERR);
+        map_params["request"]      = "redirect.html";
+        map_params["content-type"] = "text/html";
+
+        // Build the full HTTP response here (mirroring the header wrapping
+        // at the end of parse()) and return, so the normal template-render
+        // path below -- which would re-render the originally-requested frame
+        // (e.g. stream.html) -- doesn't run.
+        *p_response = wrap::HTML->parse( map_params );
+
+        string s_resp;
+        s_resp.append( s_http );
+        s_resp.append( s_http_colength + tool::int2string(p_response->size()) + "\r\n" +
+                       s_http_cotype + map_params["content-type"] +
+                       s_http_cotype_add + "\r\n" );
+        s_resp.append( *p_response );
+        *p_response = s_resp;
         return;
       }
 

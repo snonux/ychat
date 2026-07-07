@@ -1,0 +1,26 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+ <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>Session expired</title>
+ <link rel="stylesheet" href="style.css" type="text/css" />
+ <script language="JavaScript">
+  <!--
+   // Served when a chat request carries an invalid/expired tmpid (no
+   // matching session). The chat UI is a frameset of iframes (stream,
+   // online, input), each of which reloads with ?tmpid=... ; rendering the
+   // login form *inside* each iframe would stack three login forms in the
+   // frameset. Instead redirect the top-level window so the whole chat
+   // window returns to the login page. top === self when this page is
+   // loaded directly (no parent frameset), so the same line covers both
+   // the in-iframe and the direct case.
+   top.location.href = "%%httpd.startsite%%";
+  //-->
+ </script>
+</head>
+<body>
+ <div>Your chat session is no longer valid.
+  <a href="%%httpd.startsite%%">Return to the login page</a>.</div>
+</body>
+</html>
