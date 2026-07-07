@@ -380,8 +380,11 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
       return;
     }
 
-    int i_pos = (int) i_http_pos + 1;
-    s_query.append(s_buf.substr(5, i_pos - 5));
+    // Use i_http_pos (not i_http_pos+1) as the length so the space before
+    // "HTTP/1.1" is NOT included in s_query. A trailing space here used to
+    // leak into the last query parameter (e.g. tmpid=...<space>) and break
+    // session lookups for GET/stream requests whose tmpid is the last param.
+    s_query.append(s_buf.substr(5, i_http_pos - 5));
   }
 
   else if (strncmp("GET", p_context->c_buf, 3) == 0)
@@ -397,8 +400,10 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
       return;
     }
 
-    int i_pos = (int) i_http_pos + 1;
-    s_query.append(s_buf.substr(5, i_pos - 5));
+    // See POST branch above: exclude the space before "HTTP/1.1" so it
+    // doesn't leak into the last query parameter (breaks session lookups for
+    // stream/online requests whose tmpid is the last parameter).
+    s_query.append(s_buf.substr(5, i_http_pos - 5));
   }
 
   // Invalid request
@@ -477,7 +482,13 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
   }
 
   if (b_is_post_request)
-    s_parameters = s_buf;
+    // The POST body arrives URL-encoded (browsers encode spaces as '+'
+    // and '/' etc. as %XX). The GET path URL-decodes s_query up front (see
+    // the url_decode() call above); the POST body must be decoded the same
+    // way, otherwise a chat command like "/col 0000FF FF0000" arrives as
+    // "%2Fcol+0000FF+FF0000" and is never recognized as a command (the '/'
+    // is hidden behind %2F), so e.g. saving colors silently no-ops.
+    s_parameters = tool::url_decode(s_buf);
 
   while ( (i_pos = s_parameters.find("&")) != string::npos )
   {
@@ -490,13 +501,14 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
   }
 
   // Get the last request parameter, which does not have a "&" on the end!
+  // Take the full value after '=' (matching the while-loop branch above).
+  // The previous code truncated the value at the first space, which dropped
+  // everything after the first word of any multi-word value -- so a POSTed
+  // "message=/col 0000FF FF0000" became "message=/col" and the /col command
+  // lost its color arguments (falling back to the default colors).
   if ( (i_pos = s_parameters.find("=")) != string::npos )
-  {
-    if ( (i_pos2 = s_parameters.find(" ")) != string::npos )
-      map_params[ s_parameters.substr(0, i_pos) ] = s_parameters.substr(i_pos+1, i_pos2-i_pos-1);
-    else
-      map_params[ s_parameters.substr(0, i_pos) ] = s_parameters.substr(i_pos+1);
-  }
+    map_params[ s_parameters.substr(0, i_pos) ] =
+      tool::replace( s_parameters.substr(i_pos+1), "\\AND", "&");
 
 #ifdef VERBOSE
   wrap::system_message(REQUEST + s_request);
