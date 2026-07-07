@@ -123,7 +123,7 @@
 #define XMLREAD "XML: Reading "
 #define XMLERR "XML Error: "
 #define XMLER1 "XML Error: Unable to load file "
-#define VERSION "0.8"
+#define VERSION "0.9.0"
 #define BRANCH "CURRENT"
 #define BUILDNR 4027
 #define UNAME "Linux 7.0.11-200.fc44.x86_64 x86_64"
