@@ -19,11 +19,8 @@ steps, follow [README.md](README.md) and the per-subproject `DOCKER.md` /
 
 ## Deployment (homelab-only, not in this repo)
 
-Deploying ychat to the f3s homelab k3s cluster (private registry push, Helm
-chart, ArgoCD Application, PVC for `/app/data`) is **homelab-specific and
-deliberately not documented in this public repo**.
-
-If you are running with the private `f3s` Amp skill available, its
-`references/ychat.md` reference has the full deployment runbook (image
-build/push, Helm chart path, ArgoCD app, storage/PVC notes). Load the `f3s`
-skill for those details. Without that skill, treat deployment as out of scope.
+Deploying ychat to a homelab cluster (private registry push, Helm chart,
+ArgoCD Application, PVC for `/app/data`) is **homelab-specific and out of
+scope for this public repo**. The full deployment runbook lives in the
+private homelab skill (its `references/ychat.md`). Load that skill for those
+details; without it, treat deployment as out of scope.

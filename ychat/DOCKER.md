@@ -144,9 +144,8 @@ cache); the input frame shows Colors/Options/Help/Users/Admin/Logout; both
 ## History
 
 Earlier in this revival there were briefly two build modes: an in-memory,
-no-database "Mode A" guest chat (the original, minimal revival, and what's
-still running live on the f3s k3s cluster as of this writing) and an opt-in
-`--enable-sqlite` "Mode B" alongside it (`Dockerfile.sqlite`,
+no-database "Mode A" guest chat (the original, minimal revival) and an
+opt-in `--enable-sqlite` "Mode B" alongside it (`Dockerfile.sqlite`,
 `DOCKER-SQLITE.md`). A later task removed Mode A entirely: `DATABASE` (and
 therefore SQLite) is now mandatory, there's only one `Dockerfile`, and the
 build-aware UI toggles that existed to make Mode A's lack of a database less
@@ -155,19 +154,6 @@ were reverted, since they no longer apply — the full login/registration/
 options UI is always functional now. Unregistered guest chatting itself was
 **not** removed — `chat.enableguest` is a runtime config option, not a
 compile flag, and stayed as-is.
-
-**Not yet deployed to f3s**: the live cluster
-(`https://ychat.f3s.lan.buetow.org/`) still runs the old no-DB image. Rolling
-this DB-backed build out is a separate, deliberate decision (needs a
-persistent volume for `/app/data`, updated Helm chart, etc.) — not done as
-part of removing the no-DB build option from the codebase.
-
-## Deploying to the f3s k3s cluster
-
-Homelab-specific deployment (image push to the private registry, Helm chart,
-ArgoCD Application, PVC for `/app/data`) is homelab-specific and **not**
-documented in this public repo. It is **not yet deployed**: the live cluster
-(`https://ychat.f3s.lan.buetow.org/`) still runs the old no-DB image.
 
 ## Optional follow-ups (not in scope for this task)
 

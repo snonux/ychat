@@ -6,7 +6,7 @@ are kept here as historical/revival code.
 
 | Subproject | What it is | Status |
 |------------|------------|--------|
-| [`./ychat`](ychat/)   | An HTTP-based web chat server (browsers are the clients; CSS/HTML/JS only). | **Revived, builds in Docker with a mandatory embedded-SQLite backend** (real, persistent registered accounts) — see [`ychat/DOCKER.md`](ychat/DOCKER.md). **Deployed to f3s** (`https://ychat.f3s.lan.buetow.org/`) with a persistent volume backing `/app/data`, image tag `67babb2`. |
+| [`./ychat`](ychat/)   | An HTTP-based web chat server (browsers are the clients; CSS/HTML/JS only). | **Revived, builds in Docker with a mandatory embedded-SQLite backend** (real, persistent registered accounts) — see [`ychat/DOCKER.md`](ychat/DOCKER.md). |
 | [`./yhttpd`](yhttpd/) | A tiny standalone http server derived from ychat's socket/threading engine. | Builds and serves reliably in Docker (verified under concurrent load) — not deployed. See [`./yhttpd/DOCKER.md`](yhttpd/DOCKER.md). |
 | [`./ycurses`](ycurses/) | A curses front-end experiment. | Builds and runs in Docker (a demo, not a service, so nothing to deploy) — see [`./ycurses/BUILD.md`](ycurses/BUILD.md). |
 
@@ -101,8 +101,8 @@ podman rm -f ychat
   in-memory, and unregistered `chat.enableguest=true` guest chatters are
   wiped on restart same as before — only the accounts table persists.
 - **Logs** go to `/app/log/` inside the container (`access_log`, `system_log`,
-  `rooms/<room>`). They're an `emptyDir` in k8s and a container-local dir
-  locally, so they don't persist after `rm`.
+  `rooms/<room>`). They're a container-local dir locally, so they don't
+  persist after `rm`.
 - **Configuration** is `ychat/etc/ychat.conf`, baked into the image at
   `/app/etc/ychat.conf`. You can override any config key at runtime with
   `-o <key> <value>` (the image already does this for
@@ -113,19 +113,6 @@ podman rm -f ychat
   via `chat.defaultop` now requires a database-authenticated registered
   account — an unregistered guest can never claim it. Other privileged
   commands (`/ko`, `/ban`, …) work normally for a registered operator.
-
----
-
-## Deploying to the f3s k3s cluster
-
-Deploying ychat to a homelab k3s cluster (image build/push, Helm chart,
-ArgoCD Application, PVC requirements) is homelab-specific and **not**
-documented in this public repo. **The DB-backed build described in this README is now
-deployed** — the live LAN URL (**https://ychat.f3s.lan.buetow.org/**) serves
-image tag `67babb2` with a persistent volume (`ychat-data-pvc`, hostPath-backed
-NFS share) mounted at `/app/data`, so registered accounts survive pod
-restarts. Chart/manifests live in the `conf` repo under
-`f3s/ychat/helm-chart/`.
 
 ---
 
