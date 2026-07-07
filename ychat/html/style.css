@@ -176,11 +176,16 @@ body.chatlayout {
     border-top: 1px solid #555555;
   }
   /* Input controls take two rows on narrow screens (see input.html): the
-     message box on its own row, and the link row below it. The link row's
-     height is now predictable (see .input-links rules below), so this only
-     needs to fit those two rows, not an unbounded number of wrapped lines. */
+     message box on its own row, and the link row below it. 96px looked
+     right on paper but measured short on an actual phone render (real
+     mobile form-control rendering is taller than desktop CSS math
+     suggests): the link row was clipped entirely below body.inputframe's
+     overflow-y:auto fallback, invisible without an undiscoverable scroll
+     inside a 96px strip. 120px was verified (via a headless-Chrome render
+     of input.html in a same-size iframe) to fit both rows with room to
+     spare. */
   .chatlayout-bottom {
-    flex: 0 0 96px;
+    flex: 0 0 120px;
   }
 
   /* Six popup links plus a scroll toggle wrap onto several lines at 16px on
