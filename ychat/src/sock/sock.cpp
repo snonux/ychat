@@ -361,30 +361,43 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
   {
     b_is_post_request = true;;
 
-    int i_pos = s_buf.find(" HTTP", 0) + 1;
+    // Crash fix: this used to compute `s_buf.find(" HTTP", 0) + 1` straight
+    // into an int. When " HTTP" isn't present (e.g. a scanner sending a bare
+    // "GET\r\n\r\n" with no path/version), find() returns string::npos and the
+    // "+ 1" wraps a 64-bit npos to 0 before it's ever compared, so the
+    // intended "== string::npos" guard below never fires. Execution then
+    // fell through to substr(5, ...), which throws std::out_of_range (an
+    // uncaught exception that kills the process) whenever the buffer is
+    // shorter than 5 bytes. Checking find()'s result before adding 1 -- and
+    // requiring at least 5 bytes to extract from -- catches both the missing
+    // " HTTP" and the too-short-buffer case as an ordinary invalid request.
+    size_t i_http_pos = s_buf.find(" HTTP", 0);
 
-    if (i_pos == string::npos && i_pos <= 5)
+    if (i_http_pos == string::npos || s_buf.size() < 5)
     {
       wrap::system_message(HTTPERR);
       delete p_context;
       return;
     }
 
+    int i_pos = (int) i_http_pos + 1;
     s_query.append(s_buf.substr(5, i_pos - 5));
   }
 
   else if (strncmp("GET", p_context->c_buf, 3) == 0)
   {
     b_is_post_request = false;
-    int i_pos = s_buf.find(" HTTP", 0) + 1;
+    // Same npos-overflow/short-buffer crash fix as the POST branch above.
+    size_t i_http_pos = s_buf.find(" HTTP", 0);
 
-    if (i_pos == string::npos && i_pos <= 5)
+    if (i_http_pos == string::npos || s_buf.size() < 5)
     {
       wrap::system_message(HTTPERR);
       delete p_context;
       return;
     }
 
+    int i_pos = (int) i_http_pos + 1;
     s_query.append(s_buf.substr(5, i_pos - 5));
   }
 
