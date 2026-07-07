@@ -125,7 +125,15 @@ a:hover {
 body.chatlayout {
   margin: 0;
   padding: 0;
+  /* 100vh is the *largest* possible viewport, i.e. with the mobile browser's
+     address bar hidden -- with this layout's overflow:hidden, that pushes
+     the bottom row (the input frame, Send/Select buttons) off-screen
+     whenever the address bar is actually showing, which is most of the
+     time. 100dvh tracks the real, currently-visible viewport instead; the
+     100vh line stays first as a fallback for browsers that don't support
+     dvh (an unsupported value is ignored, leaving the prior declaration). */
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -170,8 +178,12 @@ body.chatlayout {
   .chatlayout-top {
     flex-direction: column;
   }
+  /* 90px left a lot of visibly empty black space below the room name and a
+     user or two -- most rooms don't have enough online users to fill it.
+     56px comfortably fits the room heading + 1-2 names; the frame still
+     scrolls internally (iframes do by default) if a room gets busier. */
   .online-frame {
-    flex: 0 0 90px;
+    flex: 0 0 56px;
     border-left: 0;
     border-top: 1px solid #555555;
   }
