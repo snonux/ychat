@@ -1,7 +1,7 @@
 /*:*
  *: File: ./src/build.h
  *: 
- *: yChat; Homepage: ychat.buetow.org; Version 0.9.0-CURRENT
+ *: yChat; Homepage: ychat.buetow.org; Version 0.9.1-CURRENT
  *: 
  *: Copyright (C) 2003 Paul C. Buetow, Volker Richter
  *: Copyright (C) 2004 Paul C. Buetow
@@ -26,7 +26,7 @@
 #ifndef BUILD_H
 #define BUILD_H
 
-#define VERSION "0.9.0"
+#define VERSION "0.9.1"
 #define BRANCH "CURRENT"
 #define BUILDNR 4325
 #define UNAME "Undefined"

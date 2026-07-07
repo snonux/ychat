@@ -2,7 +2,7 @@
 #define MSGS_H
 
 #define APPNAME "curses"
-#define VERSION "0.9.0"
+#define VERSION "0.9.1"
 #define BRANCH "CURRENT"
 #define BUILDNR 1661
 #define UNAME "FreeBSD 5.3-RELEASE-p15 i386"
