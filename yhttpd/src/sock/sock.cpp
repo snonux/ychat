@@ -228,6 +228,24 @@ sock::read_http(socketcontainer *p_sock, char *c_zbuf, int i_buflen, int &i_post
       if (s_line.compare(0, 15, "Content-Length:"))
         continue;
 
+      // Malformed Content-Length guard. The match above is on the 15-char
+      // prefix "Content-Length:" with no space required, but the code below
+      // assumes the canonical "Content-Length: <value>" form (it substrs from
+      // index 16, skipping the space at index 15). Two crash cases leaked
+      // through:
+      //   - "Content-Length:" (15 chars, no space/value): substr(16, len-16)
+      //     had pos > size -> std::out_of_range throw -> uncaught -> process
+      //     crash.
+      //   - "Content-Length:\n" (16 chars, no value): s_content_length ended
+      //     up empty, and the do/while digit scan read s_content_length[z]
+      //     past the buffer (OOB read) until a stray '\n' appeared in
+      //     adjacent memory.
+      // Require the space separator and at least one char of value
+      // (length > 16) before substr, and bound the scan to the substring
+      // length so it can never read past the buffer even with no newline.
+      if (s_line.length() <= 16 || s_line[15] != ' ')
+        return -1;
+
       // Match found on Content-Length:...  process, and then break out and get us to the promised land
       s_content_length = s_line.substr( 16 /*strlen("Content-Length: ")*/, 
 		s_line.length() - 16 /*strlen("Content-Length: ")*/);
@@ -248,7 +266,7 @@ sock::read_http(socketcontainer *p_sock, char *c_zbuf, int i_buflen, int &i_post
         z++;
         
       }
-      while(ch != '\n');
+      while(z < (int)s_content_length.length() && ch != '\n');
 
       break;
     }
@@ -450,6 +468,16 @@ sock::start()
           int i_new_sock;
           size = sizeof(clientname);
           i_new_sock = accept (i_sock, (struct sockaddr *) &clientname, &size);
+
+          // Bail on any accept error (EMFILE/ENFILE under fd exhaustion,
+          // EINTR, etc.) instead of proceeding with i_new_sock == -1:
+          // FD_SET(-1, &active_fd_set) is UB (bit-op on a negative index) and
+          // the later _create_container(-1) would read/write fd -1 (EBADF).
+          if (i_new_sock < 0)
+          {
+            wrap::system_message(ACCPERR);
+            continue;
+          }
 
 #ifdef OPENSSL
 

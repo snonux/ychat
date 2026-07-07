@@ -39,6 +39,25 @@ yhttpd shares ychat's buggy files, so most ychat fixes apply. Ported / fixed:
 - **`tool::shell_command` (CGI):** replaced `popen("/bin/sh -c …")` with
   `fork/execve` of the file directly (no shell), so URL-derived metacharacters
   can't inject when `httpd.enablecgi=true` (dormant/off by default).
+- **`sock::read_http` malformed `Content-Length:` crash (a3908e1-class):**
+  `read_http` matched the header on the 15-char prefix `Content-Length:`
+  (no space required) but then assumed the canonical `Content-Length: 
+  <value>` form and `substr`'d from index 16. Two reachable crash cases
+  leaked through for any unauthenticated client: a bare `Content-Length:`
+  (15 chars) made `substr(16, len-16)` throw `std::out_of_range` (pos > size)
+  > uncaught > process crash; `Content-Length:\n` (16 chars, no value) left
+  the substring empty so the `do/while` digit scan read past the buffer (OOB
+  read) until a stray `\n` in adjacent memory. Now guarded: require the
+  space separator + a value before `substr`, and bound the scan to the
+  substring length. (ychat's a3908e1 fixed the same malformed-input-crash
+  class in its own structurally different request parser.)
+- **`sock::start` unchecked `accept`:** the `accept()` return was used
+  unchecked; on failure (`fd == -1`, e.g. EMFILE/ENFILE under fd exhaustion,
+  EINTR) `FD_SET(-1, &active_fd_set)` is UB (bit-op on a negative index) and
+  the later `_create_container(-1)` would read/write fd -1 (EBADF). Now bails
+  with `ACCPERR` and `continue`s on any `accept` error (the accept-bail half
+  of ychat's 1c36abe, which the original yhttpd port only carried the
+  `size_t`→`socklen_t` init of).
 - **`tool::replace` and the pervasive `unsigned` string positions:** yhttpd
   declared many find/substr/replace positions as `unsigned` (32-bit) but
   `std::string::find` returns `size_t` (64-bit) `npos`. Truncating `npos` to
