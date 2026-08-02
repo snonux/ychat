@@ -16,7 +16,7 @@
   <input class="text" type="text"   name="nick" value="%%nick%%" maxlength="%%chat.maxlength.username%%" accesskey="n" />
  </div>
  <br />
- <div>Enter your password:</div>
+ <div>Registered account password:</div>
  <div>
   <input class="text" type="password" name="password" value="%%pass%%" maxlength="%%chat.maxlength.password%%" accesskey="p" />
  </div>
@@ -27,10 +27,13 @@
   </div>
   <br />
   <input type="hidden" name="end" value="end" />
-  <input type="submit" value="login" accesskey="s" />
+  <button type="submit" name="login_type" value="registered" accesskey="s">Login</button>
+  <button type="submit" name="login_type" value="guest">Login as guest</button>
  </form>
  <div class="register-hint">
-  <a class="fancy" href="register.html">Register</a> a new nick If you don't want to register you may login without a password using an unregistered nick.
+  <strong>Registered user:</strong> enter your registered nick and password, then click Login. Your colors and options are saved.<br />
+  <strong>Guest:</strong> use an unregistered nick, leave the password empty, and click Login as guest. Guest settings are not stored permanently and are lost when the server removes the cached guest or restarts.<br />
+  <a class="fancy" href="register.html">Register a new nick</a>
  </div>
  <div class="footer">
   <span class="signature">yChat is OpenSource - get it at <a class="fancy" target="_blank" href="https://codeberg.org/snonux/ychat">https://codeberg.org/snonux/ychat</a></span>

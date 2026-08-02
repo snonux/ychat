@@ -172,20 +172,76 @@ chat::login( map<string,string> &map_params )
     return;
   }
 
+  string s_login_type = map_params["login_type"];
+  bool b_guest_login = s_login_type == "guest";
+  bool b_registered = false;
+  hashmap<string> map_results;
+
+#ifdef DATABASE
+  map_results = wrap::DATA->select_user_data( tool::to_lower(s_user), "selectlogin");
+  b_registered = map_results["nick"] == tool::to_lower(s_user);
+#endif
+
+  // Clients predating the explicit buttons did not send login_type. Preserve
+  // their old empty-password guest login while rejecting malformed modes.
+  if ( s_login_type.empty() )
+    b_guest_login = !b_registered && map_params["password"].empty();
+  else if ( s_login_type != "registered" && s_login_type != "guest" )
+  {
+    map_params["INFO"] = wrap::CONF->get_elem( "chat.msgs.err.invalidlogin" );
+    map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" );
+    return;
+  }
+
+  // Validate the selected login mode before taking ownership of a recycled
+  // user.  A failed login must leave that object in the garbage collector.
+  if ( b_guest_login )
+  {
+    if ( !map_params["password"].empty() )
+    {
+      map_params["INFO"] = wrap::CONF->get_elem( "chat.msgs.err.guestpassword" );
+      map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" );
+      wrap::system_message( LOGINER + s_user );
+      return;
+    }
+    if ( b_registered )
+    {
+      map_params["INFO"] = wrap::CONF->get_elem( "chat.msgs.err.registeredguest" );
+      map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" );
+      wrap::system_message( LOGINER + s_user );
+      return;
+    }
+    if ( wrap::CONF->get_elem("chat.enableguest") != "true" )
+    {
+      map_params["INFO"] = wrap::CONF->get_elem( "chat.msgs.err.noguest" );
+      map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" );
+      wrap::system_message( LOGINE4 + s_user );
+      return;
+    }
+  }
+  else
+  {
+    if ( !b_registered )
+    {
+      map_params["INFO"] = wrap::CONF->get_elem( "chat.msgs.err.notregistered" );
+      map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" );
+      wrap::system_message( LOGINER + s_user );
+      return;
+    }
+    if ( map_results["password"] != map_params["password"] )
+    {
+      map_params["INFO"] = wrap::CONF->get_elem( "chat.msgs.err.wrongpassword" );
+      map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" );
+      wrap::system_message( LOGINER + s_user );
+      return;
+    }
+  }
+
   // Prove if user is recycleable from the garbage collector:
   user *p_user = wrap::GCOL->get_user_from_garbage( s_user );
 
   if ( p_user != NULL )
   {
-    // 1. possibility to prove the password at login! (using recycled user)
-    if ( p_user->get_pass() != map_params["password"] )
-    {
-      map_params["INFO"]    = wrap::CONF->get_elem( "chat.msgs.err.wrongpassword" );
-      map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" ); // redirect to the startpage.
-      wrap::system_message( LOGINER + s_user );
-      return;
-    }
-
     // A newly registered user may be recycled from the registration
     // request before ever being loaded from the database.  Such a user has
     // change tracking disabled, so later /col and option changes would not
@@ -211,46 +267,17 @@ chat::login( map<string,string> &map_params )
   {
     p_user = new user( s_user );
 
-    // prove if nick is registered, else create a guest chatter.
-#ifdef DATABASE
-
-    hashmap<string> map_results = wrap::DATA->select_user_data( tool::to_lower(s_user), "selectlogin");
-
-    if ( map_results["nick"] == tool::to_lower(s_user) )
+    if ( b_registered )
     {
       p_user->set_is_reg( true );
-      // User exists in database, prove password:
-      // 2. possibility to prove the password at login! (using new created user from database)
-      if ( map_results["password"] != map_params["password"] )
-      {
-        map_params["INFO"]    = wrap::CONF->get_elem( "chat.msgs.err.wrongpassword" );
-        map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" ); // redirect to the startpage.
-        wrap::system_message( LOGINER + s_user );
-        return;
-      }
-      else
-      {
-        // If registered use saved options
-        map_params["registered"] = "yes";
-        map_params["color1"] = map_results["color1"];
-        map_params["color2"] = map_results["color2"];
-        map_params["email"] = map_results["email"];
-        map_params["status"] = map_results["status"];
-      }
+      map_params["registered"] = "yes";
+      map_params["color1"] = map_results["color1"];
+      map_params["color2"] = map_results["color2"];
+      map_params["email"] = map_results["email"];
+      map_params["status"] = map_results["status"];
     }
     else
-#endif
-
     {
-      // If not registered prove if guest chatting is enabled.
-      if (wrap::CONF->get_elem("chat.enableguest") != "true")
-      {
-        map_params["INFO"]    = wrap::CONF->get_elem( "chat.msgs.err.noguest" );
-        map_params["request"] = wrap::CONF->get_elem( "httpd.startsite" ); // redirect to the startpage.
-        wrap::system_message( LOGINE4 + s_user );
-        return;
-      }
-
       // Guest chatter are enabled, use standard font colors
       map_params["color1"] = wrap::CONF->get_elem( "chat.html.user.color1" );
       map_params["color2"] = wrap::CONF->get_elem( "chat.html.user.color2" );
