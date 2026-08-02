@@ -186,6 +186,13 @@ chat::login( map<string,string> &map_params )
       return;
     }
 
+    // A newly registered user may be recycled from the registration
+    // request before ever being loaded from the database.  Such a user has
+    // change tracking disabled, so later /col and option changes would not
+    // be written on logout.  Every successfully authenticated recycled
+    // user is now an active session and must track subsequent changes.
+    p_user->set_changed_data_on();
+
     if ( p_user->get_has_sess() )
     {
       map_params["tmpid"] = p_user->get_tmpid();
