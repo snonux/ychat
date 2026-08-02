@@ -1,7 +1,7 @@
 /*:*
  *: File: ./src/mods/html/yc_options.cpp
  *: 
- *: yChat; Homepage: ychat.buetow.org; Version 0.9.2-CURRENT
+ *: yChat; Homepage: ychat.buetow.org; Version 0.9.3-CURRENT
  *: 
  *: Copyright (C) 2003 Paul C. Buetow, Volker Richter
  *: Copyright (C) 2004 Paul C. Buetow

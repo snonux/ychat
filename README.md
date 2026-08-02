@@ -52,7 +52,7 @@ podman run --rm -p 2000:2000 --name ychat -v /tmp/ychat-data:/app/data:Z ychat:d
 The server logs to stdout. You should see something like:
 
 ```
-yChat 0.9.2-CURRENT Build ...
+yChat 0.9.3-CURRENT Build ...
 Sock: Created socket on localhost:2000
 Sock: Server socket is ready
 Initializing sock events (1)
