@@ -120,3 +120,8 @@ podman rm -f ychat
 
 GPL-2.0 (see [`./ychat/COPYING`](ychat/COPYING)). Source:
 https://codeberg.org/snonux/ychat
+
+ychat's web UI vendors [Pico CSS](https://picocss.com)
+(`ychat/html/pico.min.css`), which is MIT-licensed; its copyright/license
+notice is kept in the file's header comment. Pico is a separate,
+MIT-licensed dependency and is not covered by ychat's own GPL-2.0 license.

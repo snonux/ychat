@@ -1,16 +1,32 @@
+/* Layers ychat's chat-specific layout and a handful of legacy inline-color
+   quirks (bgcolor attributes in colors.html, etc.) on top of Pico CSS
+   (pico.min.css, vendored, MIT license -- see ../../README.md#license).
+   Every template links pico.min.css before this file and sets
+   html[data-theme="dark"], so colors/spacing/typography below pull from
+   Pico's --pico-* custom properties rather than hardcoded values: that
+   keeps this file in sync automatically if the vendored Pico version is
+   ever upgraded. Unlike the pre-Pico version of this file, body itself no
+   longer sets background/color/font -- Pico's :root already does, and
+   color/font-family inherit down to every element for free. */
 
-body {
-  font-family: arial, verdana;
-  background-color: #000000;
-  color: #FFFFFF;
-  margin: 0;
-  /* Breathing room on narrow viewports; the chat layout (body.chatlayout,
-     see below) needs the full viewport instead and overrides this back to 0. */
-  padding: 10px;
+/* The stream and online-user panes are each their own iframe document (not
+   wrapped in <main class="container">, which would be wrong for a document
+   this narrow) so they need their own padding, previously supplied by a
+   blanket body{padding} rule that applied Pico-agnostic pixels everywhere;
+   now each pane opts in explicitly and the stream pane also gets a
+   slightly-raised background (Pico's card color) to stay visually distinct
+   from the page underneath it. */
+body.stream {
+  background-color: var(--pico-card-background-color);
+  padding: var(--pico-spacing);
 }
 
-body.stream {
-  background-color: #333333;
+/* Same reasoning as body.stream, but the online-user list is a much
+   tighter pane (150px, or 56px on mobile -- see .online-frame below), so it
+   gets the same tight padding budget as body.inputframe rather than Pico's
+   full spacing scale. */
+body.online {
+  padding: 4px 6px;
 }
 
 .register-hint {
@@ -18,40 +34,48 @@ body.stream {
 }
 
 /* The input frame is a short, fixed-height strip (see .chatlayout-bottom)
-   holding two wrapped rows of controls; the default 10px body padding eats
-   into that budget on narrow screens, and overflow-y:auto is a safety net
-   so controls scroll into view instead of being clipped if they still don't
-   fit (e.g. very small phones/landscape). */
+   holding two wrapped rows of controls; Pico's own spacing scale is too
+   generous for that budget, so this pane keeps its own tight, real-device-
+   verified padding instead of Pico's block-spacing defaults.
+   overflow-y:auto is a safety net so controls scroll into view instead of
+   being clipped if they still don't fit (e.g. very small phones/landscape). */
 body.inputframe {
   padding: 4px 6px;
   overflow-y: auto;
 }
 
-/* Text inputs used fixed "size" (character count) attributes sized for desktop
-   (e.g. size=60 for the chat message box), which overflow a ~375px phone
-   screen. CSS width wins over the size attribute, so capping it here fixes
-   every such input without having to edit each template. 16px font-size stops
-   iOS Safari from auto-zooming the page when a field is focused. */
+/* Pico already styles text-like inputs fully (padding, border, focus ring,
+   dark-theme colors, and a 1rem/16px font-size that stops iOS Safari from
+   auto-zooming the page on focus) and sets width:100% on them. That 100%
+   is exactly what full-width form fields (login, register, options, ...)
+   want already; max-width is kept here only for the few inputs that live
+   in a narrow table cell (e.g. colors.html's hex-code fields), so they
+   can't blow out their cell. */
 .text {
   max-width: 100%;
-  box-sizing: border-box;
-  font-size: 16px;
-  padding: 4px;
 }
 
 /* Flex items default to min-width:auto, which for an <input> resolves to
    its size="..." attribute width, not its rendered CSS width -- so
    max-width:100% alone doesn't let the message box shrink to fit next to
    the Send/Select buttons on a narrow screen. min-width:0 overrides that,
-   and flex:1 1 auto makes it (not the buttons) absorb the available space. */
+   flex:1 1 auto makes it (not the buttons) absorb the available space, and
+   width:auto/margin:0 undo Pico's own width:100% and spacing-scale bottom
+   margin, both of which would otherwise fight the flex row's sizing and
+   eat into the input frame's tight height budget. */
 .input-row .text {
   flex: 1 1 auto;
   min-width: 0;
+  width: auto;
+  margin: 0;
 }
 
-input[type="submit"], input[type="button"] {
-  font-size: 16px;
-  padding: 8px 14px;
+/* Pico already themes buttons (rounded corners, primary color, hover/focus
+   states) for <button> and input[type=submit/button] alike, driven by its
+   own form-element spacing variables; the only thing added here is a
+   minimum touch-target height, which Pico doesn't guarantee and mobile
+   accessibility does. */
+button, input[type="submit"], input[type="button"] {
   min-height: 40px;
 }
 
@@ -67,7 +91,10 @@ input[type="submit"], input[type="button"] {
 
 /* input.html's message box + link row, replacing the old absolute-positioned
    divs (which had fixed pixel offsets and did not reflow) with a wrapping
-   flex row so controls stack instead of clipping on narrow screens. */
+   flex row so controls stack instead of clipping on narrow screens. Pico
+   gives every input/button a spacing-scale bottom margin meant for stacked
+   form fields; margin:0 on the direct children keeps this single-line row
+   tight instead of drifting apart vertically. */
 .input-row, .input-links {
   display: flex;
   flex-wrap: wrap;
@@ -76,42 +103,40 @@ input[type="submit"], input[type="button"] {
   padding: 4px 6px;
 }
 
+.input-row > *, .input-links > * {
+  margin: 0;
+}
+
 .input-links a {
   white-space: nowrap;
 }
 
-h1, h2, h3 {
-  padding: 5px;
-  color: #000000;
-}
-
-p {
-  padding-left: 5px;
-  padding-right: 5px;
-}
-
+/* h1 keeps ychat's original "banner" look (a colored bar above the page
+   content) but now pulls its color from Pico's primary/inverse variables
+   instead of a hardcoded orange, so it matches whatever accent color the
+   vendored Pico theme uses. h2/h3 are left to Pico's own heading styles. */
 h1 {
-  background-color: #ffa500;
+  padding: var(--pico-spacing);
+  background-color: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+  border-radius: var(--pico-border-radius);
 }
 
+/* Used by server-generated content (e.g. %%content%% in admin.html/
+   help.html) to set off inline code/config snippets; re-themed with Pico's
+   own code colors instead of a hardcoded light-blue box. */
 .code {
-  background-color: #AAAAFF;
-  padding: 10px;
+  background-color: var(--pico-code-background-color);
+  color: var(--pico-code-color);
+  padding: var(--pico-spacing);
+  border-radius: var(--pico-border-radius);
 }
 
 .footer {
   margin-top: 20px;
-  padding: 10px;
-  background-color: #555555;
-}
-
-a {
-  color: #FFFFFF;
-}
-
-a:hover {
-  color: #00FF00;
-  text-decoration: none;
+  padding: var(--pico-spacing);
+  background-color: var(--pico-card-background-color);
+  border-radius: var(--pico-border-radius);
 }
 
 /* Layout for frameset.html. A classic HTML <frameset> cannot reflow for
@@ -153,7 +178,7 @@ body.chatlayout {
 .online-frame {
   flex: 0 0 150px;
   border: 0;
-  border-left: 1px solid #555555;
+  border-left: var(--pico-border-width) solid var(--pico-muted-border-color);
 }
 
 .chatlayout-bottom {
@@ -185,7 +210,7 @@ body.chatlayout {
   .online-frame {
     flex: 0 0 56px;
     border-left: 0;
-    border-top: 1px solid #555555;
+    border-top: var(--pico-border-width) solid var(--pico-muted-border-color);
   }
   /* Input controls take two rows on narrow screens (see input.html): the
      message box on its own row, and the link row below it. 96px looked
