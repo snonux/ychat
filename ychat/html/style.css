@@ -33,13 +33,54 @@ body.online {
   margin-top: 20px;
 }
 
+/* Colors/Options/Help/Admin/Users are opened from input.html as small,
+   fixed-size (600x480) popup windows (see input.html's popup() calls), not
+   full-page navigations. Pico's default spacing scale (container padding,
+   block spacing around <main>, heading/table margins, form-element
+   padding) is sized for a full page and is generous enough on its own to
+   push these popups' content past 480px tall, forcing a scrollbar. Scoping
+   the relevant --pico-* variables down here keeps Pico's colors/radius/
+   focus-states but fits the fixed popup size again. Custom properties
+   don't recompute through Pico's own var(--pico-spacing) references once
+   inherited, so each dependent variable needs restating here rather than
+   just --pico-spacing. */
+body.popup {
+  --pico-spacing: 0.5rem;
+  --pico-block-spacing-vertical: 0.5rem;
+  --pico-typography-spacing-vertical: 0.5rem;
+  --pico-form-element-spacing-vertical: 0.25rem;
+  --pico-form-element-spacing-horizontal: 0.5rem;
+}
+
+/* The footer's yChat/codeberg signature is page branding, not something a
+   492x480 settings/color-picker/help dialog needs; dropping it here (on
+   top of the variable overrides above) is what actually gets short popups
+   like options.html and loggedin.html to fit without scrolling -- the
+   variable tightening alone wasn't enough. Longer popups (colors' full
+   swatch grid, help's full command list, admin's full config dump) still
+   scroll regardless: that content was already taller than any reasonable
+   popup size before Pico too (verified against the pre-Pico build), it's
+   not something spacing changes can fix. */
+body.popup .footer {
+  display: none;
+}
+
 /* The input frame is a short, fixed-height strip (see .chatlayout-bottom)
    holding two wrapped rows of controls; Pico's own spacing scale is too
    generous for that budget, so this pane keeps its own tight, real-device-
    verified padding instead of Pico's block-spacing defaults.
-   overflow-y:auto is a safety net so controls scroll into view instead of
-   being clipped if they still don't fit (e.g. very small phones/landscape). */
+   --pico-form-element-spacing-* is also scoped down here: Pico's default
+   (0.75rem/1rem) pads every button/input tall enough on its own that the
+   link row no longer fits without scrolling, even though min-height:40px
+   below still floors each control at the original tap-target size. 0.25rem
+   matches the old .text{padding:4px} exactly, so buttons/inputs come out
+   the same size as before Pico, just themed with Pico's colors/radius.
+   overflow-y:auto stays as a safety net so controls scroll into view
+   instead of being clipped if they still don't fit (e.g. a very small
+   phone in landscape). */
 body.inputframe {
+  --pico-form-element-spacing-vertical: 0.25rem;
+  --pico-form-element-spacing-horizontal: 0.5rem;
   padding: 4px 6px;
   overflow-y: auto;
 }
@@ -68,6 +109,36 @@ body.inputframe {
   min-width: 0;
   width: auto;
   margin: 0;
+}
+
+/* Pico's width:100% rule (see .input-row .text above) also matches
+   input[type=submit] and input[type=button] -- not just text inputs --
+   which forced Send and Select onto their own full-width rows below the
+   message box instead of sitting beside it. width:auto here undoes that
+   for just these two controls, keeping them their natural (padding-driven)
+   width in the flex row. */
+.input-row input[type="submit"],
+.input-row input[type="button"] {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+/* Pico makes button[type=submit] full-width by default (it's grouped with
+   text inputs/selects, sized for one-control-per-row forms), which stacks
+   index.html's Login / Login as guest buttons instead of sitting them
+   side by side. flex + width:auto opts this specific row back out; flex:1
+   keeps the two buttons equal width and lets them wrap only if the
+   viewport is too narrow for both. */
+.button-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.button-row button {
+  flex: 1 1 auto;
+  width: auto;
 }
 
 /* Pico already themes buttons (rounded corners, primary color, hover/focus
