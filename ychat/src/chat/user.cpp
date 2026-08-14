@@ -70,6 +70,12 @@ user::initialize()
   this -> b_away = false;
   this -> b_fake = false;
   this -> b_invisible = false;
+  // Was previously left uninitialized: a fresh user's b_online read as
+  // whatever garbage was on the heap, and if that happened to already be
+  // false, set_online(false)'s equality guard silently no-op'd on the first
+  // real logout attempt -- trapping the user in its room forever, re-flagged
+  // as timed out on every timer tick without ever actually being removed.
+  this -> b_online = true;
   this -> s_col1 = wrap::CONF->get_elem( "chat.html.user.color1" );
   this -> s_col2 = wrap::CONF->get_elem( "chat.html.user.color2" );
 
