@@ -1,7 +1,7 @@
 /*:*
  *: File: ./src/cli/cli.h
  *: 
- *: yChat; Homepage: ychat.buetow.org; Version 0.9.4-CURRENT
+ *: yChat; Homepage: ychat.buetow.org; Version 0.9.5-CURRENT
  *: 
  *: Copyright (C) 2003 Paul C. Buetow, Volker Richter
  *: Copyright (C) 2004 Paul C. Buetow
