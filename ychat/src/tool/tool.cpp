@@ -35,6 +35,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <fstream>
 #include "tool.h"
 
 bool
@@ -359,6 +360,79 @@ tool::path_has_traversal( const string &s_request )
   }
 
   return false;
+}
+
+// Extracts the request target from the HTTP request line in s_buf
+// ("<METHOD> <target> HTTP/x.y"), without its single leading '/', into
+// s_target. Returns false for a request line without a method/target
+// separator or without the " HTTP" version marker.
+//
+// The target starts right after the first space, whatever the method's
+// length. The POST branch in sock.cpp used to hardcode substr(5, ...) for
+// both "GET " (4 chars) and "POST " (5 chars), so a POST target kept its
+// leading '/': "POST / HTTP/1.1" became request "/", which resolved to the
+// template DIRECTORY itself, and the old html.cpp read loop spun forever on
+// it (100% CPU, unbounded memory, OOMKill).
+//
+// Only the first line is searched so " HTTP" inside a header or POST body
+// can never be mistaken for the version marker.
+bool
+tool::http_request_target( const string &s_buf, string &s_target )
+{
+  size_t i_line_end = s_buf.find( '\n' );
+  string s_line = s_buf.substr( 0, i_line_end );
+
+  size_t i_method_end = s_line.find( ' ' );
+  if ( i_method_end == string::npos )
+    return false;
+
+  size_t i_http_pos = s_line.find( " HTTP", i_method_end );
+  if ( i_http_pos == string::npos )
+    return false;
+
+  // i_http_pos == i_method_end means an empty target ("GET HTTP/1.1").
+  size_t i_start = i_method_end + 1;
+  s_target = i_http_pos > i_method_end
+             ? s_line.substr( i_start, i_http_pos - i_start ) : "";
+
+  if ( ! s_target.empty() && s_target[0] == '/' )
+    s_target.erase( 0, 1 );
+
+  return true;
+}
+
+// Reads the whole file s_path into s_content. Returns false (leaving
+// s_content empty) unless s_path is a regular file of at most i_max_size
+// bytes that could be read completely. Refusing directories and other
+// non-regular files matters: an ifstream opened on a directory succeeds,
+// but every read on it fails without ever setting eofbit, so an
+// "until eof()" loop never terminates. The size bound keeps a huge or
+// growing file from exhausting memory.
+bool
+tool::read_regular_file( const string &s_path, string &s_content,
+                         size_t i_max_size )
+{
+  s_content.clear();
+
+  struct stat st;
+  if ( stat( s_path.c_str(), &st ) != 0 || ! S_ISREG( st.st_mode ) )
+    return false;
+
+  if ( static_cast<unsigned long long>( st.st_size ) > i_max_size )
+    return false;
+
+  ifstream if_file( s_path.c_str(), ios::binary );
+  if ( ! if_file )
+    return false;
+
+  s_content.resize( st.st_size );
+  if ( st.st_size > 0 && ! if_file.read( &s_content[0], st.st_size ) )
+  {
+    s_content.clear();
+    return false;
+  }
+
+  return true;
 }
 
 int

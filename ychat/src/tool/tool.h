@@ -52,6 +52,9 @@ public:
   static string ychat_version();
   static string url_decode(string s_url);
   static bool path_has_traversal(const string &s_request);
+  static bool http_request_target(const string &s_buf, string &s_target);
+  static bool read_regular_file(const string &s_path, string &s_content,
+                                size_t i_max_size);
   static int htoi(string &s_str);
 };
 

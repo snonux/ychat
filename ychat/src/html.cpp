@@ -26,8 +26,13 @@
 #ifndef HTML_CPP
 #define HTML_CPP
 
-#include <fstream>
 #include "html.h"
+#include "tool/tool.h"
+
+// Upper bound for a single served template/static file. The largest file
+// in html/ is well below 1 MiB; this only stops a stray huge file from
+// being slurped into memory (and the template cache).
+static const size_t MAX_TEMPLATE_SIZE = 4 * 1024 * 1024;
 
 using namespace std;
 
@@ -57,10 +62,18 @@ html::parse( map<string,string> &map_params )
   // if not, read file.
   if ( ! shashmap<string>::exists( s_file ) )
   {
-    string   s_path  = get_name();
-    ifstream if_templ( s_path.append( s_file ).c_str(), ios::binary );
+    string s_path = get_name();
+    s_path.append( s_file );
 
-    if ( ! if_templ )
+    // Only a bounded regular file is served: a request that resolves to a
+    // directory (e.g. the template dir itself) or anything else unreadable
+    // gets the not-found page. The old "while (!eof()) get()" loop never
+    // terminated on a directory (the reads fail without setting eofbit), so
+    // it appended forever until the pod was OOMKilled. Reading exactly
+    // st_size bytes also drops the old workaround of erasing the last char
+    // for text/ types, which only undid that loop's duplicated final byte
+    // (binary files were served with the duplicate byte).
+    if ( ! tool::read_regular_file( s_path, s_templ, MAX_TEMPLATE_SIZE ) )
     {
       wrap::system_message( OFFFOUND + s_path );
       if (map_params["request"] == wrap::CONF->get_elem( "httpd.html.notfound" ))
@@ -69,19 +82,6 @@ html::parse( map<string,string> &map_params )
       map_params["request"] = wrap::CONF->get_elem( "httpd.html.notfound" );
       return parse( map_params );
     }
-
-    char c_buf;
-    while ( !if_templ.eof() )
-    {
-      if_templ.get( c_buf );
-      s_templ += c_buf;
-    }
-
-    if ( map_params["content-type"].compare(0,5,"text/") == 0 )
-      s_templ.erase(s_templ.end()-1);
-
-    if_templ.close();
-
 
     // cache file.
     if (wrap::CONF->get_bool("httpd.html.cache"))

@@ -358,56 +358,27 @@ sock::handle_client_read(int i_fd, short event, void *p_arg)
   bool b_is_post_request;
 
   if (strncmp("POST", p_context->c_buf, 4) == 0)
-  {
-    b_is_post_request = true;;
-
-    // Crash fix: this used to compute `s_buf.find(" HTTP", 0) + 1` straight
-    // into an int. When " HTTP" isn't present (e.g. a scanner sending a bare
-    // "GET\r\n\r\n" with no path/version), find() returns string::npos and the
-    // "+ 1" wraps a 64-bit npos to 0 before it's ever compared, so the
-    // intended "== string::npos" guard below never fires. Execution then
-    // fell through to substr(5, ...), which throws std::out_of_range (an
-    // uncaught exception that kills the process) whenever the buffer is
-    // shorter than 5 bytes. Checking find()'s result before adding 1 -- and
-    // requiring at least 5 bytes to extract from -- catches both the missing
-    // " HTTP" and the too-short-buffer case as an ordinary invalid request.
-    size_t i_http_pos = s_buf.find(" HTTP", 0);
-
-    if (i_http_pos == string::npos || s_buf.size() < 5)
-    {
-      wrap::system_message(HTTPERR);
-      delete p_context;
-      return;
-    }
-
-    // Use i_http_pos (not i_http_pos+1) as the length so the space before
-    // "HTTP/1.1" is NOT included in s_query. A trailing space here used to
-    // leak into the last query parameter (e.g. tmpid=...<space>) and break
-    // session lookups for GET/stream requests whose tmpid is the last param.
-    s_query.append(s_buf.substr(5, i_http_pos - 5));
-  }
-
+    b_is_post_request = true;
   else if (strncmp("GET", p_context->c_buf, 3) == 0)
-  {
     b_is_post_request = false;
-    // Same npos-overflow/short-buffer crash fix as the POST branch above.
-    size_t i_http_pos = s_buf.find(" HTTP", 0);
-
-    if (i_http_pos == string::npos || s_buf.size() < 5)
-    {
-      wrap::system_message(HTTPERR);
-      delete p_context;
-      return;
-    }
-
-    // See POST branch above: exclude the space before "HTTP/1.1" so it
-    // doesn't leak into the last query parameter (breaks session lookups for
-    // stream/online requests whose tmpid is the last parameter).
-    s_query.append(s_buf.substr(5, i_http_pos - 5));
+  else
+  {
+    // Invalid request
+    wrap::system_message(HTTPERR);
+    delete p_context;
+    return;
   }
 
-  // Invalid request
-  else
+  // Extract the request target (without its leading '/') from the request
+  // line. tool::http_request_target() finds the target after the method
+  // instead of assuming a fixed method length: a hardcoded substr(5, ...)
+  // was right for "GET " but kept the '/' for "POST ", so "POST /" requested
+  // the template directory itself and spun the old read loop into an
+  // OOMKill. It also rejects a request line without " HTTP" (e.g. a scanner
+  // sending a bare "GET\r\n\r\n"), which used to throw std::out_of_range.
+  // The space before "HTTP/1.1" is excluded so it doesn't leak into the last
+  // query parameter (e.g. tmpid=...<space> broke session lookups).
+  if ( ! tool::http_request_target(s_buf, s_query) )
   {
     wrap::system_message(HTTPERR);
     delete p_context;
