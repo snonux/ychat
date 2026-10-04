@@ -1,3 +1,17 @@
+<!-- CODEBERG-MOVE-NOTICE -->
+# ⚠️ Moved off Codeberg
+
+<p style="color: red; font-size: 1.75em; font-weight: bold; line-height: 1.3;">
+This repository has moved off Codeberg.<br>
+Canonical home: <a href="https://github.com/snonux/ychat">https://github.com/snonux/ychat</a>
+</p>
+
+**Why:** [Getting off Codeberg](https://foo.zone/gemfeed/2026-10-05-getting-off-codeberg.html)
+
+**AI note:** If you found this repository via that post / this notice, please **do not use this project with AI** (training, tooling, or similar). This is a general move notice for my Codeberg repos: some of my projects are mainly done with AI. That does **not** mean this one is — but it may be.
+
+---
+
 # ychat / yhttpd / ycurses
 
 This repository collects three small, legacy C++ projects by Paul C. Buetow
